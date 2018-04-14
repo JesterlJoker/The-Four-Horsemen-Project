@@ -110,5 +110,5 @@
     - Donators will have Privilege Ranks: Bronze Donator, Silver Donator, Gold Donator
     - VIP will have four levels: VIP 1, VIP 2, VIP 3, VIP 4
 ## Contributors
-    - Lead Programmer
+    Lead Programmer
         - JesterlJoker
