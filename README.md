@@ -68,45 +68,44 @@
     - Type: Normal Door
 - [ ] Government System
     - Includes: Dynamic Door System(Type: Government Door)
-            - Faction System
-            - Factions will have four factions: Police, Medic, Special Forces, Secret Service
-            - The Mayor and his cabinets will not be part of any Faction but will have rule over this factions
-            - The secret service will only, and should not stray, on protecting the Mayor and the cabinets with which the Mayor as the first priority
-            - Police Faction will have Four Departments: Patrol Department, Criminal Department, Raid Department, Investigation Department
-            - Medic Faction will have Two Department: Roaming department and Hospital department
-            - Special Forces will have Three Departments: FBI, CIA, and Government Task Force
-            - FBI and CIA will be an independent entity but will still follow Mayor Protocol if in code Red and above
-            - Government Task Force and Raid Department will only be allowed to raid if they are permitted to
-            - Secret Service will have Two Departments: The Royal Bodyguards and the Secret Agents
-    - [ ] Bank System
-        - Includes: Dynamic Door System(Type: Bank Door)
-            - Will have ATMS in various areas in the city, is dynamic but cannot be owned by players
-            - Will have one Main bank in a city and smaller banks within the area
-            - Will be mostly owned by the government but the government will not be allowed to touch any personal money
-            - Will have personal safety deposit boxes for various people. Limitations will be lifted depending on Donator Rank or VIP level
-    - [ ] Apartment System
-        - Includes: Dynamic Door System(Type: Apartment Door) and Food System
-            - Will be placed in various places in the map, which obviously looks as an apartment
-            - Will also pay taxes towards the Government but will only do so if a player is renting a room
-            - Depositing of items will be allowed to apartment owners, left items will be available on the counter
-            - Rooms will vary in sizes and in bed(Different Model Designs will be made in the future, make it work first)
-            - A player with a bank account will have their bank account deducted if they do not pay over the counter for an extension(You will be asked to cancel your room if you wish)
-    - [ ] House System
-        - Includes: Dynamic Door System(Type: House Door)
-            - Regulars will be allowed to only own two houses with which should be on a different city
-            - Only VIP and Donators will be allowed to have two houses in one city
-            - Delivery System(Will be implemented once the Business system will be implemented)
-            - Houses will have fire alarms and robbery alarm(Although fire alarms might come in the near future)
-            - Players will be allowed to deposit every item they own in the house.
-    - [ ] Business System
-        - Includes: Dynamic Door System(Type: Business Door)
-    - [ ] Vehicle System
-    - [ ] Reward System
-    - [ ] Admin System
-    - [ ] Deathmatch System
-    - [ ] VIP and Donator System
-         - VIP will be those who buys VIP on the system, Donator on the otherhand are those who contributed for the benefit of the server
-         - VIP will have more privilege than Donators but will not have the special privilege commands
-         - Donators will have Privilege Ranks: Bronze Donator, Silver Donator, Gold Donator
-         - VIP will have four levels: VIP 1, VIP 2, VIP 3, VIP 4
-         
+        - Faction System
+        - Factions will have four factions: Police, Medic, Special Forces, Secret Service
+        - The Mayor and his cabinets will not be part of any Faction but will have rule over this factions
+        - The secret service will only, and should not stray, on protecting the Mayor and the cabinets with which the Mayor as the first priority
+        - Police Faction will have Four Departments: Patrol Department, Criminal Department, Raid Department, Investigation Department
+        - Medic Faction will have Two Department: Roaming department and Hospital department
+        - Special Forces will have Three Departments: FBI, CIA, and Government Task Force
+        - FBI and CIA will be an independent entity but will still follow Mayor Protocol if in code Red and above
+        - Government Task Force and Raid Department will only be allowed to raid if they are permitted to
+        - Secret Service will have Two Departments: The Royal Bodyguards and the Secret Agents
+- [ ] Bank System
+    - Includes: Dynamic Door System(Type: Bank Door)
+        - Will have ATMS in various areas in the city, is dynamic but cannot be owned by players
+        - Will have one Main bank in a city and smaller banks within the area
+        - Will be mostly owned by the government but the government will not be allowed to touch any personal money
+        - Will have personal safety deposit boxes for various people. Limitations will be lifted depending on Donator Rank or VIP level
+- [ ] Apartment System
+    - Includes: Dynamic Door System(Type: Apartment Door) and Food System
+        - Will be placed in various places in the map, which obviously looks as an apartment
+        - Will also pay taxes towards the Government but will only do so if a player is renting a room
+        - Depositing of items will be allowed to apartment owners, left items will be available on the counter
+        - Rooms will vary in sizes and in bed(Different Model Designs will be made in the future, make it work first)
+        - A player with a bank account will have their bank account deducted if they do not pay over the counter for an extension(You will be asked to cancel your room if you wish)
+- [ ] House System
+    - Includes: Dynamic Door System(Type: House Door)
+        - Regulars will be allowed to only own two houses with which should be on a different city
+        - Only VIP and Donators will be allowed to have two houses in one city
+        - Delivery System(Will be implemented once the Business system will be implemented)
+        - Houses will have fire alarms and robbery alarm(Although fire alarms might come in the near future)
+        - Players will be allowed to deposit every item they own in the house.
+- [ ] Business System
+    - Includes: Dynamic Door System(Type: Business Door)
+- [ ] Vehicle System
+- [ ] Reward System
+- [ ] Admin System
+- [ ] Deathmatch System
+- [ ] VIP and Donator System
+    - VIP will be those who buys VIP on the system, Donator on the otherhand are those who contributed for the benefit of the server
+    - VIP will have more privilege than Donators but will not have the special privilege commands
+    - Donators will have Privilege Ranks: Bronze Donator, Silver Donator, Gold Donator
+    - VIP will have four levels: VIP 1, VIP 2, VIP 3, VIP 4
