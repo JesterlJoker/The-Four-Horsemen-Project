@@ -2,15 +2,12 @@
 
 [![sampctl](https://shields.southcla.ws/badge/sampctl-tfhmenproj-2f2f2f.svg?style=for-the-badge)](https://github.com/JesterlJoker/tfhmenproj)
 
-## What is this about?
+## What is this about
 
 - A gamemode that is planned to be a mixed type of gamemode: Freeroam with Roleplay and a Twist of Deathmatches. The server will start as a roleplay server in which it will be the base of the running script, deathmatches will follow since freeroam can be done during roleplay. Roleplay interactions is a must and Roleplay rules are to be mostly followed.
 
 ## Rules
 
-- There will be changes to the rules that will apply to the standard of the said gamemode
-
-##
     - No Random Deathmatching
         - Ones you are on the street killing an innocent bystander is not allowed, unless the server is on deathmatch mode(will be explained thoroughly in the future)
         - This rule will include: spawn killing, weapon testing(without permission)
@@ -40,7 +37,8 @@
         - It says it all
     - No suicide when being chased by cops
         - It says it all
-    
+    - There will be changes to the rules that will apply to the standard of the said gamemode
+
     The rules above which will be broken by everyone and anyone in the server will be having a big penalty. Of which if an admin has been caught three times will get him demoted.
 
     Note: Total banning or Banned Forever is only done in certain circumstances(i.e cheating, hacking, and constant bugging). Bans will be as short as 1 day and as long as 6 months, in worse case scenario 7 to one year. You may still be able to logged in into the server but you will be locked into the ban island which is also the admin island. Ban players can still talk to the admins but not on everyone else. Banned players will not be able to use commands.
@@ -52,25 +50,24 @@
     Note 4: Warnings has a three count law. Ones reaching three count you will be banned to a minimum of 1 month and a maximum of two months
 
 ## Work done
-- Basic Functionality
-##
-    - [x] Login / Registration System
-        - Includes: Email system, referral system, birthdate system
-    - [ ] Item System
-        - Will be added after Business System is finished
-    - [ ] Food System
-        - Will have a variety of food for different races(In the future, make it work first)
-    - [ ] Weapon System
-        - Will be added after Business System is finished
-    - [ ] Drug System
-        - Will be added after Business System is finished
-    - [ ] Door System
-        - Includes: Virtual and Interior Location
+
+- [x] Login / Registration System
+    - Includes: Email system, referral system, birthdate system
+- [ ] Item System
+    - Will be added after Business System is finished
+- [ ] Food System
+    - Will have a variety of food for different races(In the future, make it work first)
+- [ ] Weapon System
+    - Will be added after Business System is finished
+- [ ] Drug System
+    - Will be added after Business System is finished
+- [ ] Door System
+    - Includes: Virtual and Interior Location
             - Locks and Pass keys
             - Names and Ownership
-        - Type: Normal Door
-    - [ ] Government System
-        - Includes: Dynamic Door System(Type: Government Door)
+    - Type: Normal Door
+- [ ] Government System
+    - Includes: Dynamic Door System(Type: Government Door)
             - Faction System
             - Factions will have four factions: Police, Medic, Special Forces, Secret Service
             - The Mayor and his cabinets will not be part of any Faction but will have rule over this factions
@@ -112,6 +109,3 @@
          - VIP will have more privilege than Donators but will not have the special privilege commands
          - Donators will have Privilege Ranks: Bronze Donator, Silver Donator, Gold Donator
          - VIP will have four levels: VIP 1, VIP 2, VIP 3, VIP 4
-- Later Plans
-##
-
