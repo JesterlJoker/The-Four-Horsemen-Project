@@ -1,6 +1,6 @@
 # The Four Horsemen Project
 
-[![sampctl](https://shields.southcla.ws/badge/sampctl-tfhmenproj-2f2f2f.svg?style=for-the-badge)](https://github.com/JesterlJoker/tfhmenproj)
+[![sampctl](https://shields.southcla.ws/badge/sampctl-tfhm-2f2f2f.svg?style=for-the-badge)](https://github.com/JesterlJoker/tfhm)
 
 ## What is this about
 
