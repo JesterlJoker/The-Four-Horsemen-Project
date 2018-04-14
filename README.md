@@ -109,3 +109,4 @@
          - VIP will have more privilege than Donators but will not have the special privilege commands
          - Donators will have Privilege Ranks: Bronze Donator, Silver Donator, Gold Donator
          - VIP will have four levels: VIP 1, VIP 2, VIP 3, VIP 4
+         
