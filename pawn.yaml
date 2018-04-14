@@ -1,0 +1,16 @@
+dependencymeta:
+  site: ""
+  user: JesterlJoker
+  repo: freeroam
+entry: fr.pwn
+output: fr.amx
+dependencies:
+- sampctl/samp-stdlib
+- pawn-lang/YSI-includes
+- Zeex/samp-plugin-crashdetect
+- Open-GTO/sa-mp-fixes
+- Southclaws/progress2
+- pBlueG/SA-MP-MySQL
+- maddinat0r/sscanf
+runtime:
+  mode: y_testing
