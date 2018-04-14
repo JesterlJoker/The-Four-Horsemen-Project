@@ -561,6 +561,25 @@ PlayerDialog(const playerid, const dialog){
     return 1;
 }
 
+CheckPlayerIp(const ip){
+    new bool:valid = FALSE;
+    foreac(new playerid : Player){
+        new playerip[16];
+        GetPlayerIp(playerid, ip, sizeof ip);
+        if(strcmp(playerip, ip, TRUE) == 0){
+            for(new i = 0, j = MAX_AUTHORIZED; i < j; i++){
+                if(strcmp(PlayerData[playerid][username], AuthorizedPersonnel[i]) == 0){
+                    valid = TRUE;
+                    break;
+                }
+            }
+        }else{
+            break;
+        }
+    }
+    return valid;
+}
+
 public OnGameModeInit(){
     return 1;
 }
@@ -601,4 +620,12 @@ public OnPlayerDisconnect(playerid, reason){
 
 public OnPlayerUpdate(playerid){
     return 0;
+}
+
+public OnRconLoginAttempt(ip[], password[], success ){
+    if(CheckPlayerIp(ip) != TRUE){
+        SCM(playerid, -1, "[SYSTEM]You are not authorized to login");
+        return 0;
+    }
+    return 1;
 }
