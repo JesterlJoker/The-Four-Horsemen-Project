@@ -8,9 +8,9 @@
 #define                                 FIXES_ServerVarMsg                  (0)
 #include                                <fixes>
 
-#include                                <YSI\y_ini>
 #include                                <YSI\y_dialog>
 #include                                <YSI\y_iterate>
+#include                                <YSI\y_timers>
 
 #include                                <sscanf2>
 #include                                <sqlitei>
@@ -33,6 +33,10 @@
 #define                                 MAX_EMAIL                       (65)
 #define                                 MAX_SLOT                        (11)
 #define                                 MAX_JOBS                        (2)
+#define                                 MAX_FIRSTNAME                   (8)
+#define                                 MAX_MIDDLENAME                  (2)
+#define                                 MAX_LASTNAME                    (8)
+#define                                 MAX_TAG                         (4)
 
 enum pInfo{
     // Account Data
@@ -51,6 +55,9 @@ enum pInfo{
     yearloggedin,
 
     // Player Data
+    firstname[MAX_FIRSTNAME],
+    middlename[MAX_MIDDLENAME],
+    lastname[MAX_LASTNAME],
     Float: health,
     Float: armor,
     exp,
@@ -65,6 +72,12 @@ enum pInfo{
     cash,
     coins,
     referredby[MAX_USERNAME],
+    Float: x,
+    Float: y,
+    Float: z,
+    Float: a,
+    interiorid,
+    virtualworld,
 
     jobs[MAX_JOBS],
     craftingskill,
@@ -73,6 +86,7 @@ enum pInfo{
 
     weapons[MAX_SLOT],
     ammo[MAX_SLOT],
+    armedweapon,
 
     // Player Faults
     bool: banned,
@@ -97,7 +111,9 @@ enum {
     SAVE_PENALTIES, LOAD_ACCOUNT, LOAD_ALL, EMPTY_DATA,
 
     LOGIN, REGISTER, REGISTER_TOO_SHORT, BIRTHMONTH, BIRTHDATE, BIRTHYEAR, EMAIL, EMAIL_INVALID,
-    EMAIL_TOO_SHORT, REFERREDBY, REFERREDBY_DN_EXIST
+    EMAIL_TOO_SHORT, REFERREDBY, REFERREDBY_DN_EXIST, FIRSTNAME, INVALID_FIRSTNAME, LASTNAME, INVALID_LASTNAME,
+
+    SPAWN_PLAYER, REVIVE_PLAYER
 }
 
 new 
@@ -111,7 +127,7 @@ AccountQuery(playerid, query){
         case CREATE_NEW:{
             new DBStatement:stmt = db_prepare(database, "BEGIN TRANSACTION;\
             INSERT INTO Accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);\
-            INSERT INTO Character_Data (username, referredby) VALUES (?, ?);\
+            INSERT INTO Character_Data (username, firstname, lastname, referredby) VALUES (?, ?, ?, ?);\
             INSERT INTO Character_Jobs VALUES (?);\
             INSERT INTO Character_Faults VALUES (?);\
             INSERT INT Character_Weapons VALUES (?); \
@@ -133,19 +149,23 @@ AccountQuery(playerid, query){
             
             // Character Data Create
             stmt_bind_value(stmt, 13, DB::TYPE_STRING, PlayerData[playerid][username]);
-            stmt_bind_value(stmt, 14, DB::TYPE_STRING, PlayerData[playerid][referredby]);
+            stmt_bind_value(stmt, 14, DB::TYPE_STRING, PlayerData[playerid][firstname]);
+            stmt_bind_value(stmt, 15, DB::TYPE_STRING, PlayerData[playerid][lastname]);
+            stmt_bind_value(stmt, 16, DB::TYPE_STRING, PlayerData[playerid][referredby]);
 
             // Job Create
-            stmt_bind_value(stmt, 15, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_bind_value(stmt, 17, DB::TYPE_STRING, PlayerData[playerid][username]);
 
             // Fault Create
-            stmt_bind_value(stmt, 16, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_bind_value(stmt, 18, DB::TYPE_STRING, PlayerData[playerid][username]);
 
             // Weapons Create
-            stmt_bind_value(stmt, 17, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_bind_value(stmt, 19, DB::TYPE_STRING, PlayerData[playerid][username]);
 
             // Close statement
             stmt_execute(stmt), stmt_close(stmt);
+
+            doSpawnPlayer(playerid, SPAWN_PLAYER);
         }
         case SAVE_ACCOUNT:{
             new DBStatement:stmt = db_prepare(database, "UPDATE Accounts SET password = ?, salt = ?, email = ?, birthmonth = ?, birthdate = ?, birthyear = ?, monthregistered = ?, dateregistered = ?, yearregistered = ?, monthloggedin = ?, dateloggedin = ?, yearloggedin = ? \
@@ -166,7 +186,8 @@ AccountQuery(playerid, query){
             stmt_execute(stmt), stmt_close(stmt);
         }
         case SAVE_DATA:{
-            new DBStatement:stmt = db_prepare(database, "UPDATE Character_Data SET meleekill = ?, handgunkill = ?, shotgunkill = ?, smgkill = ?, riflekill = ?, sniperkill = ?, otherkill = ?, deaths = ?, cash = ?, coins = ?, referredby = ? \
+            new DBStatement:stmt = db_prepare(database, "UPDATE Character_Data SET meleekill = ?, handgunkill = ?, shotgunkill = ?, smgkill = ?, riflekill = ?, sniperkill = ?, otherkill = ?, deaths = ?, cash = ?, coins = ?, referredby = ?, firstname = ?, middlename = ?, lastname = ?, \
+            x = ?, y = ?, z = ?, a = ?, interiorid = ?, virtualworld = ? \
             WHERE username = ?");
             stmt_bind_value(stmt, 0, DB::TYPE_INT, PlayerData[playerid][meleekill]);
             stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][handgunkill]);
@@ -179,7 +200,16 @@ AccountQuery(playerid, query){
             stmt_bind_value(stmt, 8, DB::TYPE_INT, PlayerData[playerid][cash]);
             stmt_bind_value(stmt, 9, DB::TYPE_INT, PlayerData[playerid][coins]);
             stmt_bind_value(stmt, 10, DB::TYPE_STRING, PlayerData[playerid][referredby]);
-            stmt_bind_value(stmt, 11, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_bind_value(stmt, 11, DB::TYPE_STRING, PlayerData[playerid][firstname]);
+            stmt_bind_value(stmt, 12, DB::TYPE_STRING, PlayerData[playerid][middlename]);
+            stmt_bind_value(stmt, 13, DB::TYPE_STRING, PlayerData[playerid][lastname]);
+            stmt_bind_value(stmt, 14, DB::TYPE_FLOAT, PlayerData[playerid][x]);
+            stmt_bind_value(stmt, 15, DB::TYPE_FLOAT, PlayerData[playerid][y]);
+            stmt_bind_value(stmt, 16, DB::TYPE_FLOAT, PlayerData[playerid][z]);
+            stmt_bind_value(stmt, 17, DB::TYPE_FLOAT, PlayerData[playerid][a]);
+            stmt_bind_value(stmt, 18, DB::TYPE_INT, PlayerData[playerid][interiorid]);
+            stmt_bind_value(stmt, 19, DB::TYPE_INT, PlayerData[playerid][virtualworld]);
+            stmt_bind_value(stmt, 20, DB::TYPE_STRING, PlayerData[playerid][username]);
             stmt_execute(stmt), stmt_close(stmt);
         }
         case SAVE_JOB:{
@@ -230,11 +260,8 @@ AccountQuery(playerid, query){
             new DBStatement: stmt = db_prepare(database, "UPDATE Character_Faults SET banned = ?, banmonth = ?, bandate = ?, banyear = ?, banupliftmonth = ?, banupliftdate = ?, banupliftyear = ?, totalbans = ?, kicks = ?, warnings = ?, penalties = ? \
             WHERE username = ?");
             // Since SQLITE does not hold booleans, we convert the booleans into integers that will be used
-            new bvalue;
-            if(PlayerData[playerid][banned] == TRUE) bvalue = 1;
-            else bvalue = 0;
 
-            stmt_bind_value(stmt, 0, DB::TYPE_INT, bvalue);
+            stmt_bind_value(stmt, 0, DB::TYPE_INT, (PlayerData[playerid][banned] == TRUE) ? 1 : 0);
             stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][banmonth]);
             stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][bandate]);
             stmt_bind_value(stmt, 3, DB::TYPE_INT, PlayerData[playerid][banyear]);
@@ -264,9 +291,10 @@ AccountQuery(playerid, query){
             JOIN Character_Data ON Accounts.username = Character_Data.username \
             JOIN Character_Jobs ON Accounts.username = Character_Jobs.username \
             JOIN Character_Weapons ON Accounts.username = Character_Weapons.username \
-            JOIN Character_Faults ON Accounts.username = Character_Faults \
+            JOIN Character_Faults ON Accounts.username = Character_Faults.username \
             WHERE Accounts.username = %s", namestring);
             new DBResult: result = db_query(database, szQuery);
+            // Load account data
             sql_get_string(result, "password", PlayerData[playerid][password], MAX_PASS);
             PlayerData[playerid][salt] = sql_get_int(result, "salt");
             sql_get_string(result, "email", PlayerData[playerid][email], MAX_EMAIL);
@@ -277,6 +305,12 @@ AccountQuery(playerid, query){
             PlayerData[playerid][dateregistered] = sql_get_int(result, "dateregistered");
             PlayerData[playerid][yearregistered] = sql_get_int(result, "yearregistered");
 
+            // load character data
+            
+            // character internal data
+            sql_get_string(result, "firstname", PlayerData[playerid][firstname], MAX_FIRSTNAME);
+            sql_get_string(result, "middlename", PlayerData[playerid][middlename], MAX_MIDDLENAME);
+            sql_get_string(result, "lastname", PlayerData[playerid][lastname], MAX_LASTNAME);
             PlayerData[playerid][health] = sql_get_float(result, "health");
             PlayerData[playerid][armor] = sql_get_float(result, "armor");
             PlayerData[playerid][exp] = sql_get_int(result, "exp");
@@ -291,7 +325,21 @@ AccountQuery(playerid, query){
             PlayerData[playerid][cash] = sql_get_int(result, "cash");
             PlayerData[playerid][coins] = sql_get_int(result, "coins");
             sql_get_string(result, "referredby", PlayerData[playerid][referredby], MAX_EMAIL);
+            PlayerData[playerid][x] = sql_get_float(result, "x");
+            PlayerData[playerid][y] = sql_get_float(result, "y");
+            PlayerData[playerid][z] = sql_get_float(result, "z");
+            PlayerData[playerid][a] = sql_get_float(result, "a");
+            PlayerData[playerid][interiorid] = sql_get_int(result, "interiorid");
+            PlayerData[playerid][virtualworld] = sql_get_int(result, "virtualworld");
 
+            //character job data
+            PlayerData[playerid][jobs][0] = sql_get_int(result, "jobs_0");
+            PlayerData[playerid][jobs][1] = sql_get_int(result, "jobs_1");
+            PlayerData[playerid][craftingskill] = sql_get_int(result, "craftingskill");
+            PlayerData[playerid][smithingskill] = sql_get_int(result, "smithingskill");
+            PlayerData[playerid][deliveryskill] = sql_get_int(result, "deliveryskill");
+
+            //character weapon data
             for(new i = 0, j = MAX_SLOT; i < j; i++){
                 new string[10];
                 format(string, sizeof string, "slot_%d", i);
@@ -299,12 +347,20 @@ AccountQuery(playerid, query){
                 format(string, sizeof string, "ammo_%d", i);
                 PlayerData[playerid][ammo][i] = sql_get_int(result, string);
             }
+            PlayerData[playerid][armedweapon] = sql_get_int(result, "armedweapon");
 
-            PlayerData[playerid][jobs][0] = sql_get_int(result, "jobs_0");
-            PlayerData[playerid][jobs][1] = sql_get_int(result, "jobs_1");
-            PlayerData[playerid][craftingskill] = sql_get_int(result, "craftingskill");
-            PlayerData[playerid][smithingskill] = sql_get_int(result, "smithingskill");
-            PlayerData[playerid][deliveryskill] = sql_get_int(result, "deliveryskill");
+            new bancurl = sql_get_int(result, "banned");
+            PlayerData[playerid][banned] = !!bancurl;
+            PlayerData[playerid][banmonth] = sql_get_int(result, "banmonth");
+            PlayerData[playerid][bandate] = sql_get_int(result, "bandate");
+            PlayerData[playerid][banyear] = sql_get_int(result, "banyear");
+            PlayerData[playerid][banupliftmonth] = sql_get_int(result, "banupliftmonth");
+            PlayerData[playerid][banupliftdate] = sql_get_int(result, "banupliftdate");
+            PlayerData[playerid][banupliftyear] = sql_get_int(result, "banupliftyear");
+            PlayerData[playerid][totalbans] = sql_get_int(result, "totalbans");
+            PlayerData[playerid][warnings] = sql_get_int(result, "warnings");
+            PlayerData[playerid][kicks] = sql_get_int(result, "kicks");
+            PlayerData[playerid][penalties] = sql_get_int(result, "penalties");
 
             db_free_result(result);
         }
@@ -350,17 +406,6 @@ doSalt(const playerid){
     }
     PlayerData[playerid][salt] = strval(container);
     return 1;
-}
-
-doValidateEmail(const string[]){
-    new bool:valid = TRUE;
-    if(!strfind(string, "@")){
-        valid = FALSE;
-    }
-    if(!strfind(string, ".")){
-        valid = FALSE;
-    }
-    return valid;
 }
 
 PlayerDialog(const playerid, const dialog){
@@ -470,7 +515,7 @@ PlayerDialog(const playerid, const dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
-                        if(doValidateEmail(inputtext) == TRUE){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
                             format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
                             PlayerDialog(playerid, REFERREDBY);
                         }else{
@@ -489,7 +534,7 @@ PlayerDialog(const playerid, const dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
-                        if(doValidateEmail(inputtext) == TRUE){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
                             format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
                             PlayerDialog(playerid, REFERREDBY);
                         }else{
@@ -508,7 +553,7 @@ PlayerDialog(const playerid, const dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
-                        if(doValidateEmail(inputtext) == TRUE){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
                             format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
                             PlayerDialog(playerid, REFERREDBY);
                         }else{
@@ -526,6 +571,15 @@ PlayerDialog(const playerid, const dialog){
             inline register(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
+                    new string[44 + MAX_USERNAME];
+                    format(string, sizeof string, "SELECT * FROM Accounts WHERE username = '%s'", db_escape_string(PlayerData[playerid][username]));
+                    new DBResult: result = db_query(database, string);
+                    if(db_num_rows(result) != 0){
+                        format(PlayerData[playerid][referredby], MAX_USERNAME, "%s", inputtext);
+                        PlayerDialog(playerid, FIRSTNAME);
+                    }else{
+                        PlayerDialog(playerid, REFERREDBY_DN_EXIST);
+                    }
                 }
             }
             Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "Enter the username of the person that invited you to our server.", "Submit", "Skip");
@@ -534,9 +588,74 @@ PlayerDialog(const playerid, const dialog){
             inline register(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
+                    new string[44 + MAX_USERNAME];
+                    format(string, sizeof string, "SELECT * FROM Accounts WHERE username = '%s'", db_escape_string(PlayerData[playerid][username]));
+                    new DBResult: result = db_query(database, string);
+                    if(db_num_rows(result) != 0){
+                        format(PlayerData[playerid][referredby], MAX_USERNAME, "%s", inputtext);
+                        PlayerDialog(playerid, FIRSTNAME);
+                    }else{
+                        PlayerDialog(playerid, REFERREDBY_DN_EXIST);
+                    }
                 }
             }
             Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "This person does not exist. Please type the username properly.\nNote: Username is case-sensitive.", "Submit", "Skip");
+        }
+        case FIRSTNAME:{
+            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_FIRSTNAME){
+                        format(PlayerData[playerid][firstname], MAX_FIRSTNAME, "%s", inputtext);
+                        PlayerDialog(playerid, LASTNAME);
+                    }else{
+                        PlayerDialog(playerid, INVALID_FIRSTNAME);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "You have created your account, now you need to give your character a name.\nType down your desired firstname", "Submit");
+        }
+        case INVALID_FIRSTNAME:{
+            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_FIRSTNAME){
+                        format(PlayerData[playerid][firstname], MAX_FIRSTNAME, "%s", inputtext);
+                        PlayerDialog(playerid, LASTNAME);
+                    }else{
+                        PlayerDialog(playerid, INVALID_FIRSTNAME);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Invalid Firstname.\nThe firstname you desired might either be longer or shorter than the desired length.\nA minimum of 4 characters and a maximum of 7 characters should be considered", "Submit");
+        }
+        case LASTNAME:{
+            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_LASTNAME){
+                        format(PlayerData[playerid][lastname], MAX_LASTNAME, "%s", inputtext);
+                        AccountQuery(playerid, CREATE_NEW);
+                    }else{
+                        PlayerDialog(playerid, INVALID_LASTNAME);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Now you type in the desired lastname you wish.\nNote: Just like the firstname the desired character length should not be shorter than 4 characters and no longer than 7 characters", "Submit");
+        }
+        case INVALID_LASTNAME:{
+            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_LASTNAME){
+                        format(PlayerData[playerid][lastname], MAX_LASTNAME, "%s", inputtext);
+                        AccountQuery(playerid, CREATE_NEW);
+                    }else{
+                        PlayerDialog(playerid, INVALID_LASTNAME);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Invalid Lastname.\nNote: Just like the firstname the desired character length should not be shorter than 4 characters and no longer than 7 characters", "Submit");
         }
         case LOGIN:{
             new string[101 + MAX_USERNAME];
@@ -553,6 +672,26 @@ PlayerDialog(const playerid, const dialog){
                 }
             }
             Dialog_ShowCallback(playerid, using inline login, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Login", string, "Submit");
+        }
+    }
+    return 1;
+}
+
+doSpawnPlayer(const playerid, const type){
+    switch(type){
+        case SPAWN_PLAYER:{
+            for(new i = 0, j = MAX_SLOT; i < j; i++){
+                GivePlayerWeapon(playerid, PlayerData[playerid][weapons][i], PlayerData[playerid][ammo][i]);
+            }
+            SetPlayerHealth(playerid, PlayerData[playerid][health]);
+            SetPlayerArmour(playerid, PlayerData[playerid][armor]);
+            SetPlayerArmedWeapon(playerid, PlayerData[playerid][armedweapon]);
+            SetPlayerPos(playerid, PlayerData[playerid][x], PlayerData[playerid][y], PlayerData[playerid][z]);
+            SetPlayerFacingAngle(playerid, PlayerData[playerid][a]);
+            SetPlayerInterior(playerid, PlayerData[playerid][interiorid]);
+            SetPlayerVirtualWorld(playerid, PlayerData[playerid][virtualworld]);
+            TogglePlayerSpectating(playerid, FALSE);
+            TogglePlayerControllable(playerid, TRUE);
         }
     }
     return 1;

@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS `Character_Faults` (
 );
 CREATE TABLE IF NOT EXISTS `Character_Data` (
 	`username`	TEXT NOT NULL,
+	`firstname`	TEXT,
+	`middlename`	TEXT DEFAULT NULL,
+	`lastname`	TEXT,
 	`health`	REAL ( 13 , 2 ) DEFAULT 100.00,
 	`armor`	REAL ( 13 , 2 ) DEFAULT 0.00,
 	`exp`	INTEGER DEFAULT 0,
