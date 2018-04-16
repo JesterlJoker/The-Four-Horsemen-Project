@@ -31,7 +31,7 @@
 #define                                 MAX_SALT                        (16)
 //#define                                 MAX_DATE                        (18)
 #define                                 MAX_EMAIL                       (65)
-#define                                 MAX_SLOT                        (11)
+#define                                 MAX_SLOT                        (13)
 #define                                 MAX_JOBS                        (2)
 #define                                 MAX_FIRSTNAME                   (8)
 #define                                 MAX_MIDDLENAME                  (2)
@@ -121,6 +121,20 @@ new
     PlayerFlags: PlayerFlag[MAX_PLAYERS char],
     DB: database
     ;
+
+/*SetVehicleParam(vehicleid, const type){
+    new engine, lights, alarm, doors, bonnet, boot, objective;
+    GetVehicleParamsEx(vehicleid, engine, lights, alarm, doors, bonnet, boot, objective);
+    switch(type){
+        case PARAM_ENGINE:{SetVehicleParamsEx(vehicleid, (engine == 1) ? VEHICLE_PARAMS_OFF : VEHICLE_PARAMS_ON, lights, alarm, doors, bonnet, boot, objective);}
+        case PARAM_LIGHTS:{SetVehicleParamsEx(vehicleid, engine, (lights == 1) ? VEHICLE_PARAMS_OFF : VEHICLE_PARAMS_ON, alarm, doors, bonnet, boot, objective);}
+        case PARAM_ALARM:{SetVehicleParamsEx(vehicleid, engine, lights, (alarm == 1) ? VEHICLE_PARAMS_OFF : VEHICLE_PARAMS_ON, doors, bonnet, boot, objective);}
+        case PARAM_DOORS:{SetVehicleParamsEx(vehicleid, engine, lights, alarm, (doors == 1) ? VEHICLE_PARAMS_OFF : VEHICLE_PARAMS_ON, bonnet, boot, objective);}
+        case PARAM_BONNET:{SetVehicleParamsEx(vehicleid, engine, lights, alarm, doors, (bonnet == 1) ? VEHICLE_PARAMS_OFF : VEHICLE_PARAMS_ON, boot, objective);}
+        case PARAM_BOOT:{SetVehicleParamsEx(vehicleid, engine, lights, alarm, doors, bonnet, (boot == 1) ? VEHICLE_PARAMS_OFF : VEHICLE_PARAMS_ON, objective);}
+    }
+    return 1;
+}*/
 
 AccountQuery(playerid, query){
     switch(query){
@@ -365,34 +379,46 @@ AccountQuery(playerid, query){
             db_free_result(result);
         }
         case EMPTY_DATA:{
+            // Emptying Account Data
             format(PlayerData[playerid][username], MAX_USERNAME, "");
             format(PlayerData[playerid][password], MAX_PASS, "");
             format(PlayerData[playerid][email], MAX_EMAIL, "");
+            PlayerData[playerid][birthmonth] = PlayerData[playerid][birthdate] = PlayerData[playerid][birthyear] = 
             PlayerData[playerid][monthregistered] = PlayerData[playerid][dateregistered] = PlayerData[playerid][yearregistered] =
             PlayerData[playerid][monthloggedin] = PlayerData[playerid][dateloggedin] = PlayerData[playerid][yearloggedin] = 0;
             PlayerData[playerid][salt] = -1;
 
+            //Emptying Character Data
+            format(PlayerData[playerid][firstname], MAX_FIRSTNAME, ""), format(PlayerData[playerid][middlename], MAX_MIDDLENAME, ""),
+            format(PlayerData[playerid][lastname], MAX_LASTNAME, "");
+            PlayerData[playerid][exp] = 1;
             PlayerData[playerid][meleekill] = PlayerData[playerid][handgunkill] = PlayerData[playerid][shotgunkill] = 
             PlayerData[playerid][smgkill] = PlayerData[playerid][riflekill] = PlayerData[playerid][sniperkill] =
             PlayerData[playerid][otherkill] = PlayerData[playerid][deaths] = 
             PlayerData[playerid][coins] = 0;
             PlayerData[playerid][cash] = 100;
             format(PlayerData[playerid][referredby], MAX_USERNAME, "");
+            PlayerData[playerid][x] = PlayerData[playerid][y] = PlayerData[playerid][z] = PlayerData[playerid][a] = 0.0;
+            PlayerData[playerid][interiorid] = PlayerData[playerid][virtualworld] = 0;
 
+            // Emptying Character Job
             PlayerData[playerid][jobs][0] = PlayerData[playerid][jobs][1] = -1;
             PlayerData[playerid][craftingskill] = PlayerData[playerid][smithingskill] = PlayerData[playerid][deliveryskill] = 0;
 
+            // Emptying Character Weapons
             for(new i = 0, j = MAX_SLOT; i < j; i++){
                 PlayerData[playerid][weapons][i] =
                 PlayerData[playerid][ammo][i] = 0;
             }
 
+            // Emptying Character Faults
             PlayerData[playerid][banned] = FALSE;
             PlayerData[playerid][banmonth] = PlayerData[playerid][bandate] = PlayerData[playerid][banyear] =
             PlayerData[playerid][banupliftmonth] = PlayerData[playerid][banupliftdate] = PlayerData[playerid][banupliftyear] = -1;
             PlayerData[playerid][totalbans] = PlayerData[playerid][warnings] = PlayerData[playerid][kicks] =
             PlayerData[playerid][penalties] = 0;
 
+            // Reset All Flags for player
             PlayerFlag{ playerid } = PlayerFlags:0;
         }
     }
@@ -692,14 +718,45 @@ doSpawnPlayer(const playerid, const type){
             SetPlayerVirtualWorld(playerid, PlayerData[playerid][virtualworld]);
             TogglePlayerSpectating(playerid, FALSE);
             TogglePlayerControllable(playerid, TRUE);
+            new string[MAX_PLAYER_NAME];
+            if(isnull(PlayerData[playerid][middlename]))
+                format(string, sizeof string, "%s_%s", PlayerData[playerid][firstname], PlayerData[playerid][lastname]);
+            else
+                format(string, sizeof string, "%s_%s_%s", PlayerData[playerid][firstname], PlayerData[playerid][middlename], PlayerData[playerid][lastname]);
+            SetPlayerName(playerid, string);
+            BitFlag_On(PlayerFlag{ playerid }, LOGGED_IN_PLAYER);
         }
     }
     return 1;
 }
 
+doGetLevel(playerid){
+    new level;
+    if(PlayerData[playerid][exp] <= 50) level = 1;
+    else if(PlayerData[playerid][exp] >= 51 && PlayerData[playerid][exp] <= 100) level = 2;
+    else if(PlayerData[playerid][exp] >= 101 && PlayerData[playerid][exp] <= 150) level = 3;
+    else if(PlayerData[playerid][exp] >= 151 && PlayerData[playerid][exp] <= 200) level = 4;
+    else if(PlayerData[playerid][exp] >= 201 && PlayerData[playerid][exp] <= 250) level = 5;
+    else if(PlayerData[playerid][exp] >= 251 && PlayerData[playerid][exp] <= 300) level = 6;
+    else if(PlayerData[playerid][exp] >= 301 && PlayerData[playerid][exp] <= 350) level = 7;
+    else if(PlayerData[playerid][exp] >= 351 && PlayerData[playerid][exp] <= 400) level = 8;
+    else if(PlayerData[playerid][exp] >= 401 && PlayerData[playerid][exp] <= 450) level = 9;
+    else if(PlayerData[playerid][exp] >= 451 && PlayerData[playerid][exp] <= 500) level = 10;
+    else if(PlayerData[playerid][exp] >= 501 && PlayerData[playerid][exp] <= 650) level = 11;
+    else if(PlayerData[playerid][exp] >= 551 && PlayerData[playerid][exp] <= 700) level = 12;
+    else if(PlayerData[playerid][exp] >= 601 && PlayerData[playerid][exp] <= 750) level = 13;
+    else if(PlayerData[playerid][exp] >= 651 && PlayerData[playerid][exp] <= 800) level = 14;
+    else if(PlayerData[playerid][exp] >= 701 && PlayerData[playerid][exp] <= 850) level = 15;
+    else level = 15;
+    return level;
+}
+
 main(){}
 
 public OnGameModeInit(){
+    UsePlayerPedAnims(), EnableStuntBonusForAll(0), DisableInteriorEnterExits(),
+    ShowPlayerMarkers(PLAYER_MARKERS_MODE_OFF), ManualVehicleEngineAndLights(),
+    SetGameModeText("Roleplay"), ShowNameTags(0);
     database = db_open_persistent("database.db");
     return 1;
 }
@@ -740,7 +797,11 @@ public OnPlayerConnect(playerid){
 
 public OnPlayerDisconnect(playerid, reason){
     if(BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)){
+        AccountQuery(playerid, SAVE_ACCOUNT);
         AccountQuery(playerid, SAVE_DATA);
+        AccountQuery(playerid, SAVE_JOB);
+        AccountQuery(playerid, SAVE_WEAPON);
+        AccountQuery(playerid, SAVE_PENALTIES);
     }
     AccountQuery(playerid, EMPTY_DATA);
     return 1;
@@ -748,4 +809,43 @@ public OnPlayerDisconnect(playerid, reason){
 
 public OnPlayerUpdate(playerid){
     return 0;
+}
+
+public OnPlayerDeath(playerid, killerid, reason){
+    PlayerData[playerid][deaths]++;
+    if(killerid != INVALID_PLAYER_ID){
+        if(reason >= 0 && reason <= 15) PlayerData[playerid][meleekill]++;
+        else if(reason >= 22 && reason <= 24) PlayerData[playerid][handgunkill]++;
+        else if(reason >= 25 && reason <= 27) PlayerData[playerid][shotgunkill]++;
+        else if(reason == 28 || reason == 29 || reason == 32) PlayerData[playerid][smgkill]++;
+        else if(reason >= 30 && reason <= 31 || reason == 34) PlayerData[playerid][riflekill]++;
+        else if(reason == 33) PlayerData[playerid][sniperkill]++;
+        else PlayerData[playerid][otherkill]++;
+    }
+    return 1;
+}
+
+task checktimer[250](){
+    foreach( new playerid : Player ){
+        if(PlayerData[playerid][cash] != GetPlayerMoney(playerid)){
+            ResetPlayerMoney(playerid),
+            GivePlayerMoney(playerid, PlayerData[playerid][cash]);
+        }
+        for(new i = 0, j = MAX_SLOT; i < j; i++){
+            new weapon, ammos;
+            GetPlayerWeaponData(playerid, i, weapon, ammos);
+            if(PlayerData[playerid][weapons][i] != weapon){
+                GivePlayerWeapon(playerid, PlayerData[playerid][weapons][i], PlayerData[playerid][ammo][i]);
+            }else{
+                if(PlayerData[playerid][ammo][i] != ammos){
+                    GivePlayerWeapon(playerid, weapons, PlayerData[playerid][ammo][i]);
+                }
+            }
+        }
+        new level = doGetLevel(playerid);
+        if(GetPlayerScore(playerid) != level){
+            SetPlayerScore(playerid, level);
+        }
+    }
+    return 1;
 }
