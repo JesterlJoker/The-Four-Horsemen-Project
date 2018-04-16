@@ -50,7 +50,7 @@
     Note 4: Warnings has a three count law. Ones reaching three count you will be banned to a minimum of 1 month and a maximum of two months
 
 ## Work done
-
+![Progress](http://progressed.io/bar/6?title=progress)
 - [x] Login / Registration System
     - Includes: Email system, referral system, birthdate system
     - Uses MySQL if enabled else SQLite(Not yet implemented)
