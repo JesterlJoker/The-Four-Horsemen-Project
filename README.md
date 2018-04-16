@@ -1,6 +1,7 @@
 # The Four Horsemen Project
 
 [![sampctl](https://shields.southcla.ws/badge/sampctl-tfhm-2f2f2f.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project)
+[![Build Status](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project.svg?branch=master)](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project)
 
 ## What is this about
 
