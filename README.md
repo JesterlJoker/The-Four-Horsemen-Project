@@ -51,7 +51,7 @@
 
 ## Work done
 
-- [x] Login / Registration System
+- [ ] Login / Registration System
     - Includes: Email system, referral system, birthdate system
     - Uses MySQL if enabled else SQLite
 - [ ] Item System
