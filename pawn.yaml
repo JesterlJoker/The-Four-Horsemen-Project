@@ -14,7 +14,7 @@ dependencies:
 - maddinat0r/sscanf
 - oscar-broman/sqlitei
 runtime:
-  mode: server
+  mode: main
 contributor:
 - JesterlJoker
 
