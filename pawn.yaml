@@ -15,3 +15,13 @@ dependencies:
 - oscar-broman/sqlitei
 runtime:
   mode: server
+contributor:
+- JesterlJoker
+
+indirect contributor:
+- Y_Less - YSI, Pawn Compiler, Fixes
+- Zeex - Pawn Compiler
+- maddinator - sscanf
+- oscar browman - sqlitei
+- pBlueG - MySQL
+- Southclaws - sampctl, progress2
