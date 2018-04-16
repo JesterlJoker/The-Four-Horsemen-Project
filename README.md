@@ -51,9 +51,9 @@
 
 ## Work done
 
-- [ ] Login / Registration System
+- [x] Login / Registration System
     - Includes: Email system, referral system, birthdate system
-    - Uses MySQL if enabled else SQLite
+    - Uses MySQL if enabled else SQLite(Not yet implemented)
 - [ ] Item System
     - Will be added after Business System is finished
 - [ ] Food System
