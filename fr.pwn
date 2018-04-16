@@ -1,17 +1,19 @@
-#include                            <a_samp>
-#include                            <fixes>
+#define                                 SERVER_NAME                         ("The Four Horsemen")
+#define                                 MAJOR_VERSION                       (0)
+#define                                 MINOR_VERSION                       (0)
+#define                                 PATCH_VERSION                       (1)
+#define                                 STATE_VERSION                       ("a")
 
-#include                            <YSI\y_ini>
-#include                            <YSI\y_dialog>
-#include                            <YSI\y_iterate>
+#include                                <a_samp>
+#define                                 FIXES_ServerVarMsg                  (0)
+#include                                <fixes>
 
-#include                            <sscanf2>
+#include                                <YSI\y_ini>
+#include                                <YSI\y_dialog>
+#include                                <YSI\y_iterate>
 
-main () {}
-
-enum AccountData{
-
-}
+#include                                <sscanf2>
+#include                                <sqlitei>
 
 #define                                 BitFlag_Get(%0,%1)              ((%0) & (%1))   // Returns zero (false) if the flag isn't set.
 #define                                 BitFlag_On(%0,%1)               ((%0) |= (%1))  // Turn on a flag.
@@ -20,6 +22,9 @@ enum AccountData{
 
 #define                                 SCM                             SendClientMessage
 #define                                 SCMTA                           SendClientMessageToAll
+#define                                 sql_get_string                  db_get_field_assoc
+#define                                 sql_get_int                     db_get_field_assoc_int
+#define                                 sql_get_float                   db_get_field_assoc_float
 
 #define                                 MAX_USERNAME                    (MAX_PLAYER_NAME + 1)
 #define                                 MAX_PASS                        (65)
@@ -33,7 +38,7 @@ enum pInfo{
     // Account Data
     username[MAX_USERNAME],
     password[MAX_PASS],
-    salt[MAX_SALT],
+    salt,
     email[MAX_EMAIL],
     birthmonth,
     birthdate,
@@ -46,6 +51,9 @@ enum pInfo{
     yearloggedin,
 
     // Player Data
+    Float: health,
+    Float: armor,
+    exp,
     meleekill,
     handgunkill,
     shotgunkill,
@@ -85,9 +93,8 @@ enum PlayerFlags:(<<= 1) {
 }
 
 enum {
-    SAVE_ACCOUNT, SAVE_DATA, SAVE_JOB, SAVE_WEAPON,
-    SAVE_PENALTIES, LOAD_ACCOUNT, LOAD_DATA, LOAD_WEAPON, LOAD_JOB,
-    LOAD_PENALTY, EMPTY_DATA,
+    CREATE_NEW, SAVE_ACCOUNT, SAVE_DATA, SAVE_JOB, SAVE_WEAPON,
+    SAVE_PENALTIES, LOAD_ACCOUNT, LOAD_ALL, EMPTY_DATA,
 
     LOGIN, REGISTER, REGISTER_TOO_SHORT, BIRTHMONTH, BIRTHDATE, BIRTHYEAR, EMAIL, EMAIL_INVALID,
     EMAIL_TOO_SHORT, REFERREDBY, REFERREDBY_DN_EXIST
@@ -95,193 +102,219 @@ enum {
 
 new 
     PlayerData[MAX_PLAYERS][pInfo],
-    PlayerFlags: PlayerFlag[MAX_PLAYERS char]
+    PlayerFlags: PlayerFlag[MAX_PLAYERS char],
+    DB: database
     ;
-
-AccountPath(const playerid){
-    new path[15 + MAX_USERNAME];
-    format(path, sizeof path, "Accounts/%s.ini", PlayerData[playerid][username]);
-    return path;
-}
-
-DataPath(const playerid){
-    new path[11 + MAX_USERNAME];
-    format(path, sizeof path, "Data/%s.ini", PlayerData[playerid][username]);
-    return path;
-}
-
-PenaltyPath(const playerid){
-    new path[14 + MAX_USERNAME];
-    format(path, sizeof path, "Penalty/%s.ini", PlayerData[playerid][username]);
-    return path;
-}
-
-JobPath(const playerid){
-    new path[11 + MAX_USERNAME];
-    format(path, sizeof path, "Jobs/%s.ini", PlayerData[playerid][username]);
-    return path;
-}
-
-WeaponPath(const playerid){
-    new path[14 + MAX_USERNAME];
-    format(path, sizeof path, "Weapons/%s.ini", PlayerData[playerid][username]);
-    return path;
-}
 
 AccountQuery(playerid, query){
     switch(query){
+        case CREATE_NEW:{
+            new DBStatement:stmt = db_prepare(database, "BEGIN TRANSACTION;\
+            INSERT INTO Accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);\
+            INSERT INTO Character_Data (username, referredby) VALUES (?, ?);\
+            INSERT INTO Character_Jobs VALUES (?);\
+            INSERT INTO Character_Faults VALUES (?);\
+            INSERT INT Character_Weapons VALUES (?); \
+            COMMIT;");
+            // Accounts Create
+            stmt_bind_value(stmt, 0, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_bind_value(stmt, 1, DB::TYPE_STRING, PlayerData[playerid][password]);
+            stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][salt]);
+            stmt_bind_value(stmt, 3, DB::TYPE_STRING, PlayerData[playerid][email]);
+            stmt_bind_value(stmt, 4, DB::TYPE_INT, PlayerData[playerid][birthmonth]);
+            stmt_bind_value(stmt, 5, DB::TYPE_INT, PlayerData[playerid][birthdate]);
+            stmt_bind_value(stmt, 6, DB::TYPE_INT, PlayerData[playerid][birthyear]);
+            stmt_bind_value(stmt, 7, DB::TYPE_INT, PlayerData[playerid][monthregistered]);
+            stmt_bind_value(stmt, 8, DB::TYPE_INT, PlayerData[playerid][dateregistered]);
+            stmt_bind_value(stmt, 9, DB::TYPE_INT, PlayerData[playerid][yearregistered]);
+            stmt_bind_value(stmt, 10, DB::TYPE_INT, PlayerData[playerid][monthloggedin]);
+            stmt_bind_value(stmt, 11, DB::TYPE_INT, PlayerData[playerid][dateloggedin]);
+            stmt_bind_value(stmt, 12, DB::TYPE_INT, PlayerData[playerid][yearloggedin]);
+            
+            // Character Data Create
+            stmt_bind_value(stmt, 13, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_bind_value(stmt, 14, DB::TYPE_STRING, PlayerData[playerid][referredby]);
+
+            // Job Create
+            stmt_bind_value(stmt, 15, DB::TYPE_STRING, PlayerData[playerid][username]);
+
+            // Fault Create
+            stmt_bind_value(stmt, 16, DB::TYPE_STRING, PlayerData[playerid][username]);
+
+            // Weapons Create
+            stmt_bind_value(stmt, 17, DB::TYPE_STRING, PlayerData[playerid][username]);
+
+            // Close statement
+            stmt_execute(stmt), stmt_close(stmt);
+        }
         case SAVE_ACCOUNT:{
-            new INI:File = INI_Open(AccountPath(playerid));
-
-            INI_SetTag(File, "Account");
-
-            INI_WriteInt(File, "YearLoggedIn", PlayerData[playerid][yearloggedin]);
-            INI_WriteInt(File, "DateLoggedIn", PlayerData[playerid][dateloggedin]);
-            INI_WriteInt(File, "MonthLoggedIn", PlayerData[playerid][monthloggedin]);
-            INI_WriteInt(File, "YearRegistered", PlayerData[playerid][yearregistered]);
-            INI_WriteInt(File, "DateRegistered", PlayerData[playerid][dateregistered]);
-            INI_WriteInt(File, "MonthRegistered", PlayerData[playerid][monthregistered]);
-            INI_WriteString(File, "Email", PlayerData[playerid][email]);
-            INI_WriteString(File, "Salt", PlayerData[playerid][salt]);
-            INI_WriteString(File, "Password", PlayerData[playerid][password]);
-
-            INI_Close(File);
+            new DBStatement:stmt = db_prepare(database, "UPDATE Accounts SET password = ?, salt = ?, email = ?, birthmonth = ?, birthdate = ?, birthyear = ?, monthregistered = ?, dateregistered = ?, yearregistered = ?, monthloggedin = ?, dateloggedin = ?, yearloggedin = ? \
+            WHERE username = ?");
+            stmt_bind_value(stmt, 0, DB::TYPE_STRING, PlayerData[playerid][password]);
+            stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][salt]);
+            stmt_bind_value(stmt, 2, DB::TYPE_STRING, PlayerData[playerid][email]);
+            stmt_bind_value(stmt, 3, DB::TYPE_INT, PlayerData[playerid][birthmonth]);
+            stmt_bind_value(stmt, 4, DB::TYPE_INT, PlayerData[playerid][birthdate]);
+            stmt_bind_value(stmt, 5, DB::TYPE_INT, PlayerData[playerid][birthyear]);
+            stmt_bind_value(stmt, 6, DB::TYPE_INT, PlayerData[playerid][monthregistered]);
+            stmt_bind_value(stmt, 7, DB::TYPE_INT, PlayerData[playerid][dateregistered]);
+            stmt_bind_value(stmt, 8, DB::TYPE_INT, PlayerData[playerid][yearregistered]);
+            stmt_bind_value(stmt, 9, DB::TYPE_INT, PlayerData[playerid][monthloggedin]);
+            stmt_bind_value(stmt, 10, DB::TYPE_INT, PlayerData[playerid][dateloggedin]);
+            stmt_bind_value(stmt, 11, DB::TYPE_INT, PlayerData[playerid][yearloggedin]);
+            stmt_bind_value(stmt, 12, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_execute(stmt), stmt_close(stmt);
         }
         case SAVE_DATA:{
-            new INI:File = INI_Open(DataPath(playerid));
-
-            INI_SetTag(File, "Data");
-            INI_WriteString(File, "Referredby", PlayerData[playerid][referredby]);
-            INI_WriteInt(File, "Coins", PlayerData[playerid][coins]);
-            INI_WriteInt(File, "Cash", PlayerData[playerid][cash]);
-            INI_WriteInt(File, "Deaths", PlayerData[playerid][deaths]);
-            INI_WriteInt(File, "Otherkills", PlayerData[playerid][otherkill]);
-            INI_WriteInt(File, "SniperKills", PlayerData[playerid][sniperkill]);
-            INI_WriteInt(File, "RifleKills", PlayerData[playerid][riflekill]);
-            INI_WriteInt(File, "SMGKills", PlayerData[playerid][smgkill]);
-            INI_WriteInt(File, "ShotgunKills", PlayerData[playerid][shotgunkill]);
-            INI_WriteInt(File, "HandgunKills", PlayerData[playerid][handgunkill]);
-            INI_WriteInt(File, "MeleeKills", PlayerData[playerid][meleekill]);
-
-            INI_Close(File);
+            new DBStatement:stmt = db_prepare(database, "UPDATE Character_Data SET meleekill = ?, handgunkill = ?, shotgunkill = ?, smgkill = ?, riflekill = ?, sniperkill = ?, otherkill = ?, deaths = ?, cash = ?, coins = ?, referredby = ? \
+            WHERE username = ?");
+            stmt_bind_value(stmt, 0, DB::TYPE_INT, PlayerData[playerid][meleekill]);
+            stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][handgunkill]);
+            stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][shotgunkill]);
+            stmt_bind_value(stmt, 3, DB::TYPE_INT, PlayerData[playerid][smgkill]);
+            stmt_bind_value(stmt, 4, DB::TYPE_INT, PlayerData[playerid][riflekill]);
+            stmt_bind_value(stmt, 5, DB::TYPE_INT, PlayerData[playerid][sniperkill]);
+            stmt_bind_value(stmt, 6, DB::TYPE_INT, PlayerData[playerid][otherkill]);
+            stmt_bind_value(stmt, 7, DB::TYPE_INT, PlayerData[playerid][deaths]);
+            stmt_bind_value(stmt, 8, DB::TYPE_INT, PlayerData[playerid][cash]);
+            stmt_bind_value(stmt, 9, DB::TYPE_INT, PlayerData[playerid][coins]);
+            stmt_bind_value(stmt, 10, DB::TYPE_STRING, PlayerData[playerid][referredby]);
+            stmt_bind_value(stmt, 11, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_execute(stmt), stmt_close(stmt);
         }
         case SAVE_JOB:{
-            new INI:File = INI_Open(JobPath(playerid));
-
-            INI_SetTag(File, "Job");
-            INI_WriteInt(File, "DeliverySkill", PlayerData[playerid][deliveryskill]);
-            INI_WriteInt(File, "SmithingSkill", PlayerData[playerid][smithingskill]);
-            INI_WriteInt(File, "CraftingSkill", PlayerData[playerid][craftingskill]);
-            INI_WriteInt(File, "Job_2", PlayerData[playerid][jobs][1]);
-            INI_WriteInt(File, "Job_1", PlayerData[playerid][jobs][0]);
-            INI_Close(File);
+            new DBStatement: stmt = db_prepare(database, "UPDATE Character_Jobs SET job_1 = ?, job_2 = ?, craftingskill = ?, smithingskill = ?, deliveryskill = ? \
+            WHERE username = ?");
+            stmt_bind_value(stmt, 0, DB::TYPE_INT, PlayerData[playerid][jobs][0]);
+            stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][jobs][1]);
+            stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][craftingskill]);
+            stmt_bind_value(stmt, 3, DB::TYPE_INT, PlayerData[playerid][smithingskill]);
+            stmt_bind_value(stmt, 4, DB::TYPE_INT, PlayerData[playerid][deliveryskill]);
+            stmt_bind_value(stmt, 5, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_execute(stmt), stmt_close(stmt);
         }
         case SAVE_WEAPON:{
-            new string[9];
-            new INI:File = INI_Open(WeaponPath(playerid));
-
-            INI_SetTag(File, "Weapon");
-            for(new i = MAX_SLOT-1, j = 0; i > j; i--){
-                format(string, sizeof string, "Ammo_%d", i);
-                INI_WriteInt(File, string, PlayerData[playerid][ammo][i]);
-                format(string, sizeof string, "Slot_%d", i);
-                INI_WriteInt(File, string, PlayerData[playerid][weapons][i]);
+            new string[308], strquery[40 + 308 + MAX_USERNAME];
+            for(new i = 0, j = MAX_SLOT; i < j; i++){
+                if(isnull(string)) format(string, sizeof string, " slot_%d = ?, ammo_%d = ?", i, i);
+                else format(string, sizeof string, "%s, slot_%d = ?, ammo_%d = ?", string, i, i);
             }
-            INI_Close(File);
+            format(strquery, sizeof strquery, "UPDATE Character_Weapons SET %s WHERE username = ?", string);
+            new DBStatement: stmt = db_prepare(database, strquery);
+            stmt_bind_value(stmt, 0, DB::TYPE_INT, PlayerData[playerid][weapons][0]);
+            stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][ammo][0]);
+            stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][weapons][1]);
+            stmt_bind_value(stmt, 3, DB::TYPE_INT, PlayerData[playerid][ammo][1]);
+            stmt_bind_value(stmt, 4, DB::TYPE_INT, PlayerData[playerid][weapons][2]);
+            stmt_bind_value(stmt, 5, DB::TYPE_INT, PlayerData[playerid][ammo][2]);
+            stmt_bind_value(stmt, 6, DB::TYPE_INT, PlayerData[playerid][weapons][3]);
+            stmt_bind_value(stmt, 7, DB::TYPE_INT, PlayerData[playerid][ammo][3]);
+            stmt_bind_value(stmt, 8, DB::TYPE_INT, PlayerData[playerid][weapons][4]);
+            stmt_bind_value(stmt, 9, DB::TYPE_INT, PlayerData[playerid][ammo][4]);
+            stmt_bind_value(stmt, 10, DB::TYPE_INT, PlayerData[playerid][weapons][5]);
+            stmt_bind_value(stmt, 11, DB::TYPE_INT, PlayerData[playerid][ammo][5]);
+            stmt_bind_value(stmt, 12, DB::TYPE_INT, PlayerData[playerid][weapons][6]);
+            stmt_bind_value(stmt, 13, DB::TYPE_INT, PlayerData[playerid][ammo][6]);
+            stmt_bind_value(stmt, 14, DB::TYPE_INT, PlayerData[playerid][weapons][7]);
+            stmt_bind_value(stmt, 15, DB::TYPE_INT, PlayerData[playerid][ammo][7]);
+            stmt_bind_value(stmt, 16, DB::TYPE_INT, PlayerData[playerid][weapons][8]);
+            stmt_bind_value(stmt, 17, DB::TYPE_INT, PlayerData[playerid][ammo][8]);
+            stmt_bind_value(stmt, 18, DB::TYPE_INT, PlayerData[playerid][weapons][9]);
+            stmt_bind_value(stmt, 19, DB::TYPE_INT, PlayerData[playerid][ammo][9]);
+            stmt_bind_value(stmt, 20, DB::TYPE_INT, PlayerData[playerid][weapons][10]);
+            stmt_bind_value(stmt, 21, DB::TYPE_INT, PlayerData[playerid][ammo][10]);
+            stmt_bind_value(stmt, 22, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_execute(stmt), stmt_close(stmt);
         }
         case SAVE_PENALTIES:{
-            new INI:File = INI_Open(PenaltyPath(playerid));
+            new DBStatement: stmt = db_prepare(database, "UPDATE Character_Faults SET banned = ?, banmonth = ?, bandate = ?, banyear = ?, banupliftmonth = ?, banupliftdate = ?, banupliftyear = ?, totalbans = ?, kicks = ?, warnings = ?, penalties = ? \
+            WHERE username = ?");
+            // Since SQLITE does not hold booleans, we convert the booleans into integers that will be used
+            new bvalue;
+            if(PlayerData[playerid][banned] == TRUE) bvalue = 1;
+            else bvalue = 0;
 
-            INI_SetTag(File, "Penalties");
-            
-            INI_WriteInt(File, "Penalties", PlayerData[playerid][penalties]);
-            INI_WriteInt(File, "Kicks", PlayerData[playerid][kicks]);
-            INI_WriteInt(File, "Warnings", PlayerData[playerid][warnings]);
-            INI_WriteInt(File, "TotalBans", PlayerData[playerid][totalbans]);
-            INI_WriteInt(File, "BanUpliftYear", PlayerData[playerid][banupliftyear]);
-            INI_WriteInt(File, "BanUpliftDate", PlayerData[playerid][banupliftdate]);
-            INI_WriteInt(File, "BanUpliftMonth", PlayerData[playerid][banupliftmonth]);
-            INI_WriteInt(File, "BanYear", PlayerData[playerid][banyear]);
-            INI_WriteInt(File, "BanDate", PlayerData[playerid][bandate]);
-            INI_WriteInt(File, "BanMonth", PlayerData[playerid][banmonth]);
-            INI_WriteBool(File, "Banned", PlayerData[playerid][banned]);
-
-            INI_Close(File);
+            stmt_bind_value(stmt, 0, DB::TYPE_INT, bvalue);
+            stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][banmonth]);
+            stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][bandate]);
+            stmt_bind_value(stmt, 3, DB::TYPE_INT, PlayerData[playerid][banyear]);
+            stmt_bind_value(stmt, 4, DB::TYPE_INT, PlayerData[playerid][banupliftmonth]);
+            stmt_bind_value(stmt, 5, DB::TYPE_INT, PlayerData[playerid][banupliftdate]);
+            stmt_bind_value(stmt, 6, DB::TYPE_INT, PlayerData[playerid][banupliftyear]);
+            stmt_bind_value(stmt, 7, DB::TYPE_INT, PlayerData[playerid][totalbans]);
+            stmt_bind_value(stmt, 8, DB::TYPE_INT, PlayerData[playerid][kicks]);
+            stmt_bind_value(stmt, 9, DB::TYPE_INT, PlayerData[playerid][warnings]);
+            stmt_bind_value(stmt, 10, DB::TYPE_INT, PlayerData[playerid][penalties]);
+            stmt_bind_value(stmt, 11, DB::TYPE_STRING, PlayerData[playerid][username]);
+            stmt_execute(stmt), stmt_close(stmt);
         }
         case LOAD_ACCOUNT:{
-            inline Load_Account(string:name[], string:value[]){
-                INI_String("Password", PlayerData[playerid][password], MAX_PASS);
-                INI_String("Salt", PlayerData[playerid][salt], MAX_SALT);
-                INI_String("Email", PlayerData[playerid][email], MAX_EMAIL);
-                INI_Int("MonthRegistered", PlayerData[playerid][monthregistered]);
-                INI_Int("DateRegistered", PlayerData[playerid][dateregistered]);
-                INI_Int("YearRegistered", PlayerData[playerid][yearregistered]);
-                INI_Int("MonthLoggedIn", PlayerData[playerid][monthloggedin]);
-                INI_Int("DateLoggedIn", PlayerData[playerid][dateloggedin]);
-                INI_Int("YearLoggedIn", PlayerData[playerid][yearloggedin]);
-            }
-            INI_ParseFile(AccountPath(playerid), using inline Load_Account);
+            new DBStatement: stmt = db_prepare(database, "SELECT password, salt FROM Accounts WHERE username = ? LIMIT 1");
+            
+            stmt_bind_result_field(stmt, 0, DB::TYPE_STRING, PlayerData[playerid][password], MAX_PASS);
+            stmt_bind_result_field(stmt, 1, DB::TYPE_INT, PlayerData[playerid][salt]);
+            stmt_bind_value(stmt, 0, DB::TYPE_STRING, PlayerData[playerid][username]);
+
+            stmt_execute(stmt), stmt_close(stmt);
         }
-        case LOAD_DATA:{
-            inline Load_Data(string:name[], string:value[]){
-                INI_Int("MeleeKills", PlayerData[playerid][meleekill]);
-                INI_Int("HandgunKills", PlayerData[playerid][handgunkill]);
-                INI_Int("ShotgunKills", PlayerData[playerid][shotgunkill]);
-                INI_Int("SMGKills", PlayerData[playerid][smgkill]);
-                INI_Int("RifleKills", PlayerData[playerid][riflekill]);
-                INI_Int("SniperKills", PlayerData[playerid][sniperkill]);
-                INI_Int("OtherKills", PlayerData[playerid][otherkill]);
-                INI_Int("Deaths", PlayerData[playerid][deaths]);
-                INI_Int("Cash", PlayerData[playerid][cash]);
-                INI_Int("Coins", PlayerData[playerid][coins]);
-                INI_String("Referredby", PlayerData[playerid][referredby]);
+        case LOAD_ALL:{
+            new szQuery[395 + MAX_USERNAME], namestring[MAX_USERNAME];
+            db_escape_string(PlayerData[playerid][username], namestring, MAX_USERNAME);
+            format(szQuery, sizeof szQuery, "SELECT * FROM Accounts \
+            JOIN Character_Data ON Accounts.username = Character_Data.username \
+            JOIN Character_Jobs ON Accounts.username = Character_Jobs.username \
+            JOIN Character_Weapons ON Accounts.username = Character_Weapons.username \
+            JOIN Character_Faults ON Accounts.username = Character_Faults \
+            WHERE Accounts.username = %s", namestring);
+            new DBResult: result = db_query(database, szQuery);
+            sql_get_string(result, "password", PlayerData[playerid][password], MAX_PASS);
+            PlayerData[playerid][salt] = sql_get_int(result, "salt");
+            sql_get_string(result, "email", PlayerData[playerid][email], MAX_EMAIL);
+            PlayerData[playerid][birthmonth] = sql_get_int(result, "birthmonth");
+            PlayerData[playerid][birthdate] = sql_get_int(result, "birthdate");
+            PlayerData[playerid][birthyear] = sql_get_int(result, "birthyear");
+            PlayerData[playerid][monthregistered] = sql_get_int(result, "monthregistered");
+            PlayerData[playerid][dateregistered] = sql_get_int(result, "dateregistered");
+            PlayerData[playerid][yearregistered] = sql_get_int(result, "yearregistered");
+
+            PlayerData[playerid][health] = sql_get_float(result, "health");
+            PlayerData[playerid][armor] = sql_get_float(result, "armor");
+            PlayerData[playerid][exp] = sql_get_int(result, "exp");
+            PlayerData[playerid][meleekill] = sql_get_int(result, "meleekill");
+            PlayerData[playerid][handgunkill] = sql_get_int(result, "handgunkill");
+            PlayerData[playerid][shotgunkill] = sql_get_int(result, "shotgunkill");
+            PlayerData[playerid][smgkill] = sql_get_int(result, "smgkill");
+            PlayerData[playerid][riflekill] = sql_get_int(result, "riflekill");
+            PlayerData[playerid][sniperkill] = sql_get_int(result, "sniperkill");
+            PlayerData[playerid][otherkill] = sql_get_int(result, "otherkill");
+            PlayerData[playerid][deaths] = sql_get_int(result, "deaths");
+            PlayerData[playerid][cash] = sql_get_int(result, "cash");
+            PlayerData[playerid][coins] = sql_get_int(result, "coins");
+            sql_get_string(result, "referredby", PlayerData[playerid][referredby], MAX_EMAIL);
+
+            for(new i = 0, j = MAX_SLOT; i < j; i++){
+                new string[10];
+                format(string, sizeof string, "slot_%d", i);
+                PlayerData[playerid][weapons][i] = sql_get_int(result, string);
+                format(string, sizeof string, "ammo_%d", i);
+                PlayerData[playerid][ammo][i] = sql_get_int(result, string);
             }
-            INI_ParseFile(DataPath(playerid), using inline Load_Data);
-        }
-        case LOAD_JOB:{
-            inline Load_Job(string:name[], string:value[]){
-                INI_Int("Job_1", PlayerData[playerid][jobs][0]);
-                INI_Int("Job_2", PlayerData[playerid][jobs][1]);
-                INI_Int("CraftingSkill", PlayerData[playerid][craftingskill]);
-                INI_Int("SmithingSKill", PlayerData[playerid][smithingskill]);
-                INI_Int("DeliverySkill", PlayerData[playerid][deliveryskill]);
-            }
-            INI_ParseFile(JobPath(playerid), using inline Load_Job);
-        }
-        case LOAD_WEAPON:{
-            new string[9];
-            inline Load_Weapon(string:name[], string:value[]){
-                for(new i = 0, j = MAX_SLOT; i < j; i++){
-                    format(string, sizeof string, "Slot_%d", i);
-                    INI_Int(string, PlayerData[playerid][weapons][i]);
-                    format(string, sizeof string, "Ammo_%d", i);
-                    INI_Int(string, PlayerData[playerid][ammo][i]);
-                }
-            }
-            INI_ParseFile(WeaponPath(playerid), using inline Load_Weapon);
-        }
-        case LOAD_PENALTY:{
-            inline Load_Penalty(string:name[], string:value[]){
-                INI_Bool("Banned", PlayerData[playerid][banned]);
-                INI_Int("BanMonth", PlayerData[playerid][banmonth]);
-                INI_Int("BanDate", PlayerData[playerid][bandate]);
-                INI_Int("BanYear", PlayerData[playerid][banyear]);
-                INI_Int("BanUpliftMonth", PlayerData[playerid][banupliftmonth]);
-                INI_Int("BanUpliftDate", PlayerData[playerid][banupliftdate]);
-                INI_Int("BanUpliftYear", PlayerData[playerid][banupliftyear]);
-                INI_Int("TotalBans", PlayerData[playerid][totalbans]);
-                INI_Int("Kicks", PlayerData[playerid][kicks]);
-                INI_Int("Penalties", PlayerData[playerid][penalties]);
-            }
-            INI_ParseFile(PenaltyPath(playerid), using inline Load_Penalty);
+
+            PlayerData[playerid][jobs][0] = sql_get_int(result, "jobs_0");
+            PlayerData[playerid][jobs][1] = sql_get_int(result, "jobs_1");
+            PlayerData[playerid][craftingskill] = sql_get_int(result, "craftingskill");
+            PlayerData[playerid][smithingskill] = sql_get_int(result, "smithingskill");
+            PlayerData[playerid][deliveryskill] = sql_get_int(result, "deliveryskill");
+
+            db_free_result(result);
         }
         case EMPTY_DATA:{
             format(PlayerData[playerid][username], MAX_USERNAME, "");
             format(PlayerData[playerid][password], MAX_PASS, "");
-            format(PlayerData[playerid][salt], MAX_SALT, "");
             format(PlayerData[playerid][email], MAX_EMAIL, "");
             PlayerData[playerid][monthregistered] = PlayerData[playerid][dateregistered] = PlayerData[playerid][yearregistered] =
             PlayerData[playerid][monthloggedin] = PlayerData[playerid][dateloggedin] = PlayerData[playerid][yearloggedin] = 0;
+            PlayerData[playerid][salt] = -1;
 
             PlayerData[playerid][meleekill] = PlayerData[playerid][handgunkill] = PlayerData[playerid][shotgunkill] = 
             PlayerData[playerid][smgkill] = PlayerData[playerid][riflekill] = PlayerData[playerid][sniperkill] =
@@ -290,8 +323,8 @@ AccountQuery(playerid, query){
             PlayerData[playerid][cash] = 100;
             format(PlayerData[playerid][referredby], MAX_USERNAME, "");
 
-            PlayerData[playerid][jobs][0] = PlayerData[playerid][jobs][1] = PlayerData[playerid][craftingskill] =
-            PlayerData[playerid][smithingskill] = PlayerData[playerid][deliveryskill] = 0;
+            PlayerData[playerid][jobs][0] = PlayerData[playerid][jobs][1] = -1;
+            PlayerData[playerid][craftingskill] = PlayerData[playerid][smithingskill] = PlayerData[playerid][deliveryskill] = 0;
 
             for(new i = 0, j = MAX_SLOT; i < j; i++){
                 PlayerData[playerid][weapons][i] =
@@ -300,7 +333,7 @@ AccountQuery(playerid, query){
 
             PlayerData[playerid][banned] = FALSE;
             PlayerData[playerid][banmonth] = PlayerData[playerid][bandate] = PlayerData[playerid][banyear] =
-            PlayerData[playerid][banupliftmonth] = PlayerData[playerid][banupliftdate] = PlayerData[playerid][banupliftyear] =
+            PlayerData[playerid][banupliftmonth] = PlayerData[playerid][banupliftdate] = PlayerData[playerid][banupliftyear] = -1;
             PlayerData[playerid][totalbans] = PlayerData[playerid][warnings] = PlayerData[playerid][kicks] =
             PlayerData[playerid][penalties] = 0;
 
@@ -311,9 +344,11 @@ AccountQuery(playerid, query){
 }
 
 doSalt(const playerid){
+    new container[MAX_SALT];
     for(new i = 0, j = MAX_SALT; i < j; i++){
-        PlayerData[playerid][salt][i] = random(9);
+       container[i] = random(9);
     }
+    PlayerData[playerid][salt] = strval(container);
     return 1;
 }
 
@@ -326,12 +361,6 @@ doValidateEmail(const string[]){
         valid = FALSE;
     }
     return valid;
-}
-
-ReferralPath(const name[]){
-    new path[15 + MAX_USERNAME];
-    format(path, sizeof path, "Accounts/%s.ini", name);
-    return path;
 }
 
 PlayerDialog(const playerid, const dialog){
@@ -497,22 +526,6 @@ PlayerDialog(const playerid, const dialog){
             inline register(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
-                    if(fexist(ReferralPath(inputtext))){
-                        format(PlayerData[playerid][referredby], MAX_USERNAME, "%s", inputtext);
-                        AccountQuery(playerid, SAVE_ACCOUNT);
-                        AccountQuery(playerid, SAVE_DATA);
-                        AccountQuery(playerid, SAVE_JOB);
-                        AccountQuery(playerid, SAVE_WEAPON);
-                        AccountQuery(playerid, SAVE_PENALTIES);
-                    }else{
-                        PlayerDialog(playerid, REFERREDBY_DN_EXIST);
-                    }
-                }else{
-                    AccountQuery(playerid, SAVE_ACCOUNT);
-                    AccountQuery(playerid, SAVE_DATA);
-                    AccountQuery(playerid, SAVE_JOB);
-                    AccountQuery(playerid, SAVE_WEAPON);
-                    AccountQuery(playerid, SAVE_PENALTIES);
                 }
             }
             Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "Enter the username of the person that invited you to our server.", "Submit", "Skip");
@@ -521,22 +534,6 @@ PlayerDialog(const playerid, const dialog){
             inline register(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
-                    if(fexist(ReferralPath(inputtext))){
-                        format(PlayerData[playerid][referredby], MAX_USERNAME, "%s", inputtext);
-                        AccountQuery(playerid, SAVE_ACCOUNT);
-                        AccountQuery(playerid, SAVE_DATA);
-                        AccountQuery(playerid, SAVE_JOB);
-                        AccountQuery(playerid, SAVE_WEAPON);
-                        AccountQuery(playerid, SAVE_PENALTIES);
-                    }else{
-                        PlayerDialog(playerid, REFERREDBY_DN_EXIST);
-                    }
-                }else{
-                    AccountQuery(playerid, SAVE_ACCOUNT);
-                    AccountQuery(playerid, SAVE_DATA);
-                    AccountQuery(playerid, SAVE_JOB);
-                    AccountQuery(playerid, SAVE_WEAPON);
-                    AccountQuery(playerid, SAVE_PENALTIES);
                 }
             }
             Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "This person does not exist. Please type the username properly.\nNote: Username is case-sensitive.", "Submit", "Skip");
@@ -561,26 +558,10 @@ PlayerDialog(const playerid, const dialog){
     return 1;
 }
 
-CheckPlayerIp(const ip){
-    new bool:valid = FALSE;
-    foreac(new playerid : Player){
-        new playerip[16];
-        GetPlayerIp(playerid, ip, sizeof ip);
-        if(strcmp(playerip, ip, TRUE) == 0){
-            for(new i = 0, j = MAX_AUTHORIZED; i < j; i++){
-                if(strcmp(PlayerData[playerid][username], AuthorizedPersonnel[i]) == 0){
-                    valid = TRUE;
-                    break;
-                }
-            }
-        }else{
-            break;
-        }
-    }
-    return valid;
-}
+main(){}
 
 public OnGameModeInit(){
+    database = db_open_persistent("database.db");
     return 1;
 }
 
@@ -588,6 +569,7 @@ public OnGameModeExit(){
     foreach( new playerid : Player){
         OnPlayerDisconnect(playerid, 0);
     }
+    db_free_persistent(database);
     return 1;
 }
 
@@ -601,12 +583,19 @@ public OnPlayerConnect(playerid){
 
     AccountQuery(playerid, EMPTY_DATA);
     GetPlayerName(playerid, PlayerData[playerid][username], MAX_USERNAME);
-    if(fexist(AccountPath(playerid))){
+
+    new namestring[MAX_USERNAME], query[50 + MAX_USERNAME];
+    db_escape_string(PlayerData[playerid][username], namestring, sizeof namestring);
+
+    format(query, sizeof query, "SELECT * FROM Accounts WHERE username = %s LIMIT 1", namestring);
+    new DBResult: result = db_query(database, query);
+    if(db_num_rows(result) != 0 ){
         AccountQuery(playerid, LOAD_ACCOUNT);
         PlayerDialog(playerid, LOGIN);
     }else{
         PlayerDialog(playerid, REGISTER);
     }
+    db_free_result(result);
     return 1;
 }
 
@@ -620,12 +609,4 @@ public OnPlayerDisconnect(playerid, reason){
 
 public OnPlayerUpdate(playerid){
     return 0;
-}
-
-public OnRconLoginAttempt(ip[], password[], success ){
-    if(CheckPlayerIp(ip) != TRUE){
-        SCM(playerid, -1, "[SYSTEM]You are not authorized to login");
-        return 0;
-    }
-    return 1;
 }

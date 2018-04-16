@@ -12,5 +12,6 @@ dependencies:
 - Southclaws/progress2
 - pBlueG/SA-MP-MySQL
 - maddinat0r/sscanf
+- oscar-broman/sqlitei
 runtime:
-  mode: y_testing
+  mode: server

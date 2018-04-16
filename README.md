@@ -53,6 +53,7 @@
 
 - [x] Login / Registration System
     - Includes: Email system, referral system, birthdate system
+    - Uses MySQL if enabled else SQLite
 - [ ] Item System
     - Will be added after Business System is finished
 - [ ] Food System
