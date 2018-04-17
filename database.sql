@@ -23,6 +23,11 @@ CREATE TABLE IF NOT EXISTS `Character_Weapons` (
 	`ammo_9`	INTEGER DEFAULT 0,
 	`slot_10`	INTEGER DEFAULT 0,
 	`ammo_10`	INTEGER DEFAULT 0,
+	`slot_11`	INTEGER,
+	`ammo_11`	INTEGER,
+	`slot_12`	INTEGER,
+	`ammo_12`	INTEGER,
+	`armedweapon`	INTEGER DEFAULT 0,
 	FOREIGN KEY(`username`) REFERENCES `Accounts`(`username`) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 CREATE TABLE IF NOT EXISTS `Character_Jobs` (
@@ -51,9 +56,9 @@ CREATE TABLE IF NOT EXISTS `Character_Faults` (
 );
 CREATE TABLE IF NOT EXISTS `Character_Data` (
 	`username`	TEXT NOT NULL,
-	`firstname`	TEXT,
+	`firstname`	TEXT NOT NULL,
 	`middlename`	TEXT DEFAULT NULL,
-	`lastname`	TEXT,
+	`lastname`	TEXT NOT NULL,
 	`health`	REAL ( 13 , 2 ) DEFAULT 100.00,
 	`armor`	REAL ( 13 , 2 ) DEFAULT 0.00,
 	`exp`	INTEGER DEFAULT 0,
@@ -65,9 +70,15 @@ CREATE TABLE IF NOT EXISTS `Character_Data` (
 	`sniperkill`	INTEGER DEFAULT 0,
 	`otherkill`	INTEGER DEFAULT 0,
 	`deaths`	INTEGER DEFAULT 0,
-	`cash`	INTEGER DEFAULT 0,
+	`cash`	BLOB DEFAULT 0,
 	`coins`	INTEGER DEFAULT 0,
-	`referredby`	TEXT,
+	`referredby`	TEXT DEFAULT NULL,
+	`x`	REAL ( 13 , 2 ) DEFAULT 0.0,
+	`y`	REAL ( 13 , 2 ) DEFAULT 0.0,
+	`z`	REAL ( 13 , 2 ) DEFAULT 0.0,
+	`a`	REAL ( 13 , 2 ) DEFAULT 0.0,
+	`interiorid`	INTEGER DEFAULT 0,
+	`virtualid`	INTEGER DEFAULT 0,
 	FOREIGN KEY(`username`) REFERENCES `Accounts`(`username`) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 CREATE TABLE IF NOT EXISTS `Accounts` (

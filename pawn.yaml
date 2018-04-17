@@ -4,6 +4,7 @@ dependencymeta:
   repo: freeroam
 entry: fr.pwn
 output: fr.amx
+version: 0.3.DL
 dependencies:
 - sampctl/samp-stdlib
 - pawn-lang/YSI-includes
@@ -18,7 +19,6 @@ runtime:
   mode: main
 contributor:
 - JesterlJoker
-
 indirect contributor:
 - Y_Less - YSI, Pawn Compiler, Fixes
 - Zeex - Pawn Compiler

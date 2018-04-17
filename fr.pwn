@@ -9,6 +9,7 @@
 #include                                <fixes>
 
 #include                                <YSI\y_dialog>
+#include                                <YSI\y_inline>
 #include                                <YSI\y_iterate>
 #include                                <YSI\y_timers>
 
@@ -91,7 +92,7 @@ enum pInfo{
     armedweapon,
 
     // Items
-    
+
     // Player Faults
     bool: banned,
     banmonth,
@@ -147,11 +148,11 @@ AccountQuery(playerid, query){
     switch(query){
         case CREATE_NEW:{
             new DBStatement:stmt = db_prepare(database, "BEGIN TRANSACTION;\
-            INSERT INTO Accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);\
-            INSERT INTO Character_Data (username, firstname, lastname, referredby) VALUES (?, ?, ?, ?);\
-            INSERT INTO Character_Jobs VALUES (?);\
-            INSERT INTO Character_Faults VALUES (?);\
-            INSERT INT Character_Weapons VALUES (?); \
+            INSERT INTO Accounts VALUES ('?', '?', ?, '?', ?, ?, ?, ?, ?, ?, ?, ?);\
+            INSERT INTO Character_Data (username, firstname, lastname, referredby) VALUES ('?', '?', '?', '?'');\
+            INSERT INTO Character_Jobs VALUES ('?'');\
+            INSERT INTO Character_Faults VALUES ('?'');\
+            INSERT INT Character_Weapons VALUES ('?''); \
             COMMIT;");
             // Accounts Create
             stmt_bind_value(stmt, 0, DB::TYPE_STRING, PlayerData[playerid][username]);
@@ -189,8 +190,8 @@ AccountQuery(playerid, query){
             doSpawnPlayer(playerid, SPAWN_PLAYER);
         }
         case SAVE_ACCOUNT:{
-            new DBStatement:stmt = db_prepare(database, "UPDATE Accounts SET password = ?, salt = ?, email = ?, birthmonth = ?, birthdate = ?, birthyear = ?, monthregistered = ?, dateregistered = ?, yearregistered = ?, monthloggedin = ?, dateloggedin = ?, yearloggedin = ? \
-            WHERE username = ?");
+            new DBStatement:stmt = db_prepare(database, "UPDATE Accounts SET password = '?', salt = '?', email = ?, birthmonth = ?, birthdate = ?, birthyear = ?, monthregistered = ?, dateregistered = ?, yearregistered = ?, monthloggedin = ?, dateloggedin = ?, yearloggedin = ? \
+            WHERE username = '?''");
             stmt_bind_value(stmt, 0, DB::TYPE_STRING, PlayerData[playerid][password]);
             stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][salt]);
             stmt_bind_value(stmt, 2, DB::TYPE_STRING, PlayerData[playerid][email]);
@@ -207,9 +208,9 @@ AccountQuery(playerid, query){
             stmt_execute(stmt), stmt_close(stmt);
         }
         case SAVE_DATA:{
-            new DBStatement:stmt = db_prepare(database, "UPDATE Character_Data SET meleekill = ?, handgunkill = ?, shotgunkill = ?, smgkill = ?, riflekill = ?, sniperkill = ?, otherkill = ?, deaths = ?, cash = ?, coins = ?, referredby = ?, firstname = ?, middlename = ?, lastname = ?, \
+            new DBStatement:stmt = db_prepare(database, "UPDATE Character_Data SET meleekill = ?, handgunkill = ?, shotgunkill = ?, smgkill = ?, riflekill = ?, sniperkill = ?, otherkill = ?, deaths = ?, cash = ?, coins = ?, referredby = '?', firstname = '?', middlename = '?', lastname = '?', \
             x = ?, y = ?, z = ?, a = ?, interiorid = ?, virtualworld = ? \
-            WHERE username = ?");
+            WHERE username = '?'");
             stmt_bind_value(stmt, 0, DB::TYPE_INT, PlayerData[playerid][meleekill]);
             stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][handgunkill]);
             stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][shotgunkill]);
@@ -235,7 +236,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_JOB:{
             new DBStatement: stmt = db_prepare(database, "UPDATE Character_Jobs SET job_1 = ?, job_2 = ?, craftingskill = ?, smithingskill = ?, deliveryskill = ? \
-            WHERE username = ?");
+            WHERE username = '?'");
             stmt_bind_value(stmt, 0, DB::TYPE_INT, PlayerData[playerid][jobs][0]);
             stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][jobs][1]);
             stmt_bind_value(stmt, 2, DB::TYPE_INT, PlayerData[playerid][craftingskill]);
@@ -250,7 +251,7 @@ AccountQuery(playerid, query){
                 if(isnull(string)) format(string, sizeof string, " slot_%d = ?, ammo_%d = ?", i, i);
                 else format(string, sizeof string, "%s, slot_%d = ?, ammo_%d = ?", string, i, i);
             }
-            format(strquery, sizeof strquery, "UPDATE Character_Weapons SET %s WHERE username = ?", string);
+            format(strquery, sizeof strquery, "UPDATE Character_Weapons SET %s WHERE username = '?'", string);
             new DBStatement: stmt = db_prepare(database, strquery);
             stmt_bind_value(stmt, 0, DB::TYPE_INT, PlayerData[playerid][weapons][0]);
             stmt_bind_value(stmt, 1, DB::TYPE_INT, PlayerData[playerid][ammo][0]);
@@ -279,7 +280,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_PENALTIES:{
             new DBStatement: stmt = db_prepare(database, "UPDATE Character_Faults SET banned = ?, banmonth = ?, bandate = ?, banyear = ?, banupliftmonth = ?, banupliftdate = ?, banupliftyear = ?, totalbans = ?, kicks = ?, warnings = ?, penalties = ? \
-            WHERE username = ?");
+            WHERE username = '?'");
             // Since SQLITE does not hold booleans, we convert the booleans into integers that will be used
 
             stmt_bind_value(stmt, 0, DB::TYPE_INT, (PlayerData[playerid][banned] == TRUE) ? 1 : 0);
@@ -297,7 +298,7 @@ AccountQuery(playerid, query){
             stmt_execute(stmt), stmt_close(stmt);
         }
         case LOAD_ACCOUNT:{
-            new DBStatement: stmt = db_prepare(database, "SELECT password, salt FROM Accounts WHERE username = ? LIMIT 1");
+            new DBStatement: stmt = db_prepare(database, "SELECT password, salt FROM Accounts WHERE username = '?'' LIMIT 1");
             
             stmt_bind_result_field(stmt, 0, DB::TYPE_STRING, PlayerData[playerid][password], MAX_PASS);
             stmt_bind_result_field(stmt, 1, DB::TYPE_INT, PlayerData[playerid][salt]);
@@ -306,14 +307,13 @@ AccountQuery(playerid, query){
             stmt_execute(stmt), stmt_close(stmt);
         }
         case LOAD_ALL:{
-            new szQuery[395 + MAX_USERNAME], namestring[MAX_USERNAME];
-            db_escape_string(PlayerData[playerid][username], namestring, MAX_USERNAME);
+            new szQuery[395 + MAX_USERNAME];
             format(szQuery, sizeof szQuery, "SELECT * FROM Accounts \
             JOIN Character_Data ON Accounts.username = Character_Data.username \
             JOIN Character_Jobs ON Accounts.username = Character_Jobs.username \
             JOIN Character_Weapons ON Accounts.username = Character_Weapons.username \
             JOIN Character_Faults ON Accounts.username = Character_Faults.username \
-            WHERE Accounts.username = %s", namestring);
+            WHERE Accounts.username = %s", db_escape_string(PlayerData[playerid][username]));
             new DBResult: result = db_query(database, szQuery);
             // Load account data
             sql_get_string(result, "password", PlayerData[playerid][password], MAX_PASS);
@@ -444,7 +444,7 @@ doSalt(const playerid){
 PlayerDialog(const playerid, const dialog){
     switch(dialog){
         case REGISTER:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_password(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
@@ -456,10 +456,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Register", "Type your new password below.", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Register", "Type your new password below.", "Submit");
         }
         case REGISTER_TOO_SHORT:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_short_password(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
@@ -471,17 +471,17 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Register", "Password too short.\nType your new password below(6 characters short and 13 characters long).", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_short_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Register", "Password too short.\nType your new password below(6 characters short and 13 characters long).", "Submit");
         }
         case BIRTHMONTH:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_birthmonth(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, inputtext
                 if(response){
                     PlayerData[playerid][birthmonth] = listitem+1;
                     PlayerDialog(playerid, BIRTHDATE);
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthmonth", 
+            Dialog_ShowCallback(playerid, using inline register_birthmonth, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthmonth", 
             "January\n\
             February\n\
             March\n\
@@ -517,14 +517,14 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_birthdate(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, inputtext
                 if(response){
                     PlayerData[playerid][birthdate] = listitem+1;
                     PlayerDialog(playerid, BIRTHYEAR);
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthdate", string, "Submit");
+            Dialog_ShowCallback(playerid, using inline register_birthdate, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthdate", string, "Submit");
         }
         case BIRTHYEAR:{
             new year, mo, da, altyear, string[7*50];
@@ -534,17 +534,17 @@ PlayerDialog(const playerid, const dialog){
                 if(isnull(string)) format(string, sizeof string, "%d", altyear);
                 else format(string, sizeof string, "%s\n%d", altyear+i);
             }
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_birthyear(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, inputtext
                 if(response){
                     PlayerData[playerid][birthyear] = altyear+listitem;
                     PlayerDialog(playerid, EMAIL);
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthyear", string, "Submit");
+            Dialog_ShowCallback(playerid, using inline register_birthyear, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthyear", string, "Submit");
         }
         case EMAIL:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_email(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
@@ -560,10 +560,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "Enter your email below", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_email, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "Enter your email below", "Submit");
         }
         case EMAIL_INVALID:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_email_invalid(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
@@ -579,10 +579,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "Invalid Email. Email must contain an @ and a .\n Enter your email below", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_email_invalid, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "Invalid Email. Email must contain an @ and a .\n Enter your email below", "Submit");
         }
         case EMAIL_TOO_SHORT:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_email_short(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
@@ -598,10 +598,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "The email you inputted is too short to be valid. Please type again. Enter your email below", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_email_short, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "The email you inputted is too short to be valid. Please type again. Enter your email below", "Submit");
         }
         case REFERREDBY:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_referral(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     new string[44 + MAX_USERNAME];
@@ -615,10 +615,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "Enter the username of the person that invited you to our server.", "Submit", "Skip");
+            Dialog_ShowCallback(playerid, using inline register_referral, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "Enter the username of the person that invited you to our server.", "Submit", "Skip");
         }
         case REFERREDBY_DN_EXIST:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_refferal_dne(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     new string[44 + MAX_USERNAME];
@@ -632,10 +632,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "This person does not exist. Please type the username properly.\nNote: Username is case-sensitive.", "Submit", "Skip");
+            Dialog_ShowCallback(playerid, using inline register_refferal_dne, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "This person does not exist. Please type the username properly.\nNote: Username is case-sensitive.", "Submit", "Skip");
         }
         case FIRSTNAME:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_firstname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_FIRSTNAME){
@@ -646,10 +646,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "You have created your account, now you need to give your character a name.\nType down your desired firstname", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "You have created your account, now you need to give your character a name.\nType down your desired firstname", "Submit");
         }
         case INVALID_FIRSTNAME:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_invalid_firstname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_FIRSTNAME){
@@ -660,10 +660,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Invalid Firstname.\nThe firstname you desired might either be longer or shorter than the desired length.\nA minimum of 4 characters and a maximum of 7 characters should be considered", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_invalid_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Invalid Firstname.\nThe firstname you desired might either be longer or shorter than the desired length.\nA minimum of 4 characters and a maximum of 7 characters should be considered", "Submit");
         }
         case LASTNAME:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_lastname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_LASTNAME){
@@ -674,10 +674,10 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Now you type in the desired lastname you wish.\nNote: Just like the firstname the desired character length should not be shorter than 4 characters and no longer than 7 characters", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Now you type in the desired lastname you wish.\nNote: Just like the firstname the desired character length should not be shorter than 4 characters and no longer than 7 characters", "Submit");
         }
         case INVALID_LASTNAME:{
-            inline register(pid, dialogid, response, listitem, string:inputtext[]){
+            inline register_invalid_lastname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_LASTNAME){
@@ -688,7 +688,7 @@ PlayerDialog(const playerid, const dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Invalid Lastname.\nNote: Just like the firstname the desired character length should not be shorter than 4 characters and no longer than 7 characters", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_invalid_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Invalid Lastname.\nNote: Just like the firstname the desired character length should not be shorter than 4 characters and no longer than 7 characters", "Submit");
         }
         case LOGIN:{
             new string[101 + MAX_USERNAME];
@@ -814,7 +814,7 @@ public OnPlayerConnect(playerid){
     new namestring[MAX_USERNAME], query[50 + MAX_USERNAME];
     db_escape_string(PlayerData[playerid][username], namestring, sizeof namestring);
 
-    format(query, sizeof query, "SELECT * FROM Accounts WHERE username = %s LIMIT 1", namestring);
+    format(query, sizeof query, "SELECT * FROM Accounts WHERE username = '%s' LIMIT 1", db_escape_string(namestring));
     new DBResult: result = db_query(database, query);
     if(db_num_rows(result) != 0 ){
         AccountQuery(playerid, LOAD_ACCOUNT);
@@ -881,7 +881,7 @@ task checktimer[250](){
     return 1;
 }
 
-task datatimer[1000*3](){
+task datatimer[1000*180](){
     foreach( new playerid : Player ){
         if(BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)){
             AccountQuery(playerid, SAVE_ACCOUNT), AccountQuery(playerid, SAVE_DATA),
