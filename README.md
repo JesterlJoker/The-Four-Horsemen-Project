@@ -1,7 +1,7 @@
 # The Four Horsemen Project
 
 [![sampctl](https://shields.southcla.ws/badge/sampctl-tfhm-2f2f2f.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project)
-[![Generic badge](https://img.shields.io/badge/Version-0.0.1b-blue.svg?style=for-the-badge)](#work-done)
+[![Generic badge](https://img.shields.io/badge/Unreleased-v0.0.1a-blue.svg?style=for-the-badge)](#work-done)
 [![Build Status](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project.svg?branch=master)](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project)
 ## What is this about
 
