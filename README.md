@@ -1,7 +1,7 @@
 # The Four Horsemen Project
 
 [![sampctl](https://shields.southcla.ws/badge/sampctl-tfhm-2f2f2f.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project)
-[![Generic badge](https://img.shields.io/badge/Unreleased-v0.0.1a-blue.svg?style=for-the-badge)](#work-done)
+![Generic badge](https://img.shields.io/badge/Unreleased-v0.0.1a-blue.svg?style=for-the-badge)
 [![Build Status](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project.svg?branch=master)](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project)
 ## What is this about
 
@@ -48,7 +48,7 @@
 
     Note 3: You can get yourself unbanned on two various reasons. Showing a video of deleting the cheat you are using and searching the said cheat without a result.
 
-    Note 4: Warnings has a three count law. Ones reaching three count you will be banned to a minimum of 1 month and a maximum of two months
+    Note 4: Warnings has a three count law. Ones reaching three count you will be banned to a minimum of 1 week and a maximum of 1 month
 
 ## Work done
 ![Progress](http://progressed.io/bar/6?title=progress)
