@@ -13,6 +13,7 @@ dependencies:
 - pBlueG/SA-MP-MySQL
 - maddinat0r/sscanf
 - oscar-broman/sqlitei
+- RogueDrifter/Anti_cheat_pack
 runtime:
   mode: main
 contributor:
