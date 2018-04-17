@@ -217,7 +217,7 @@
     Lead Programmer
         - JesterlJoker
 
-## How can you help?
+## Wanna Help?
 - You can create a an issue as an suggestion
 
 [![GitHub issues](https://img.shields.io/github/issues/Naereen/StrapDown.js.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project/issues)
