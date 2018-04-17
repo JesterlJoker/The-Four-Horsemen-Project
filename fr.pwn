@@ -79,15 +79,19 @@ enum pInfo{
     interiorid,
     virtualworld,
 
+    // Jobs
     jobs[MAX_JOBS],
     craftingskill,
     smithingskill,
     deliveryskill,
 
+    // Weapons
     weapons[MAX_SLOT],
     ammo[MAX_SLOT],
     armedweapon,
 
+    // Items
+    
     // Player Faults
     bool: banned,
     banmonth,
@@ -107,12 +111,15 @@ enum PlayerFlags:(<<= 1) {
 }
 
 enum {
+    // Database, Query and everything related to data enums
     CREATE_NEW, SAVE_ACCOUNT, SAVE_DATA, SAVE_JOB, SAVE_WEAPON,
     SAVE_PENALTIES, LOAD_ACCOUNT, LOAD_ALL, EMPTY_DATA,
 
-    LOGIN, REGISTER, REGISTER_TOO_SHORT, BIRTHMONTH, BIRTHDATE, BIRTHYEAR, EMAIL, EMAIL_INVALID,
+    // Dialog Enums
+    LOGIN, INVALID_LOGIN, REGISTER, REGISTER_TOO_SHORT, BIRTHMONTH, BIRTHDATE, BIRTHYEAR, EMAIL, EMAIL_INVALID,
     EMAIL_TOO_SHORT, REFERREDBY, REFERREDBY_DN_EXIST, FIRSTNAME, INVALID_FIRSTNAME, LASTNAME, INVALID_LASTNAME,
 
+    //Spawn Enums
     SPAWN_PLAYER, REVIVE_PLAYER
 }
 
@@ -693,7 +700,31 @@ PlayerDialog(const playerid, const dialog){
                     new hash[MAX_PASS];
                     SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_SALT);
                     if(strcmp(PlayerData[playerid][password], hash) == 0){
-                        SCM(playerid, -1, "You have logged in");
+                        AccountQuery(playerid, LOAD_ALL);
+                        doSpawnPlayer(playerid, SPAWN_PLAYER);
+                    }else{
+                        PlayerDialog(playerid, INVALID_LOGIN);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline login, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Login", string, "Submit");
+        }
+        case INVALID_LOGIN:{
+            new string[101 + MAX_USERNAME];
+            format(string, sizeof string, "Welcome back %s.\n\
+            You have typed in a wrong password that did not match on our database.\n\
+            Please retype your password correctly.\n\
+            Note: Our system is case-sensitive which means Uppercase and Lowercase Letters should follow.", PlayerData[playerid][username]);
+            inline login(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    new hash[MAX_PASS];
+                    SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_SALT);
+                    if(strcmp(PlayerData[playerid][password], hash) == 0){
+                        AccountQuery(playerid, LOAD_ALL);
+                        doSpawnPlayer(playerid, SPAWN_PLAYER);
+                    }else{
+                        PlayerDialog(playerid, INVALID_LOGIN);
                     }
                 }
             }
@@ -846,6 +877,20 @@ task checktimer[250](){
         if(GetPlayerScore(playerid) != level){
             SetPlayerScore(playerid, level);
         }
+    }
+    return 1;
+}
+
+task datatimer[1000*3](){
+    foreach( new playerid : Player ){
+        if(BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)){
+            AccountQuery(playerid, SAVE_ACCOUNT), AccountQuery(playerid, SAVE_DATA),
+            AccountQuery(playerid, SAVE_JOB), AccountQuery(playerid, SAVE_WEAPON),
+            AccountQuery(playerid, SAVE_PENALTIES), AccountQuery(playerid, EMPTY_DATA),
+            GetPlayerName(playerid, PlayerData[playerid][username], MAX_USERNAME),
+            AccountQuery(playerid, LOAD_ALL);
+        }
+        SCM(playerid, -1, "[SYSTEM]Data has been saved and rebuffered");
     }
     return 1;
 }
