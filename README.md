@@ -1,8 +1,8 @@
 # The Four Horsemen Project
 
 [![sampctl](https://shields.southcla.ws/badge/sampctl-tfhm-2f2f2f.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project)
+[![Generic badge](https://img.shields.io/badge/Version-0.0.1b-blue.svg?style=for-the-badge)](#work-done)
 [![Build Status](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project.svg?branch=master)](https://travis-ci.org/JesterlJoker/The-Four-Horsemen-Project)
-
 ## What is this about
 
 - A gamemode that is planned to be a mixed type of gamemode: Freeroam with Roleplay and a Twist of Deathmatches. The server will start as a roleplay server in which it will be the base of the running script, deathmatches will follow since freeroam can be done during roleplay. Roleplay interactions is a must and Roleplay rules are to be mostly followed.
@@ -57,8 +57,57 @@
     - Uses MySQL if enabled else SQLite(Not yet implemented)
 - [ ] Item System
     - Will be added after Business System is finished
-- [ ] Food System
-    - Will have a variety of food for different races(In the future, make it work first)
+    - Food List:(Food list can still be updated. I can add what you want just create an issue as a suggestion)
+        Note: This food list are from different delicacies around the world. I did this for a reason.
+        - Diners and other eatery establishments
+            - Hamburger
+                - with salad dish
+                - no salad dish
+            - Fried Chicken
+                - spicy
+                - regular
+            - Rice
+                - Regular
+                - Mixed
+            - Noodles
+                - Spicy Ramen
+                - Regular Ramen
+                - Misua Spicy
+                - Misua Regular
+                - Spaghetti
+                - Macaronni
+        - 24/7, 7/11, Groceries, etc
+            - Chips
+                - Chippy
+                - Nova
+                - Piatos
+                - Cheetos
+                - Tattoos
+                - Tortillas
+            - Biscuits
+                - Skyflakes
+                - Magic Flakes
+                - Bourbon Biscuits
+                - Cadbury Fingers
+            - Candies
+                - Max
+        Note 2: All of this food will have a healing ability, some would be Regeneration, some would direct impact, and some would be direct impact with decreasing effect. Some of this food would also heal only up to 50% of the players health. More in depth detail will be showed soon.
+        Note 3: Most of this food will decrease thirst depending on what they are. It will be a big research and study but it will surely happen.
+    - Drink List:(Just like food it can still be updated)
+        Note: Also the same as above I try to do the variety
+        - Coke(I don't have an idea if I should rename this or remove this and create another drink)
+        - Bright - From Sprite
+        - Lipy - From Pepsi
+        - Loyal - From Royal
+        Note 2: Drinks will have a rejuvenating effect on thirst and also slowly recovers health for the player
+    - Item List:
+        - Cellphone
+        - Radio
+        - Walkie Talkie - For short distance contact(hopefully someone would be given an idea to create a short distance in-game voice chat, hopefully but if it doesn't let's stick to chat)
+        - Cuff or Binds - This is for those who wish to kidnap people, cuff for the hand and binds for the mouth and eyes.
+        - Watch and Clocks - Watches for player and clocks for houses.(This idea is somewhat vague yet, I had this last night and forgot to type it in. I can't seem to remember what I wanted to do with this hopefully I'll remember)
+        Note: More to come so chill, I hope someone can create a suggestion up top.
+    - Accessories or Toys List: (This will be taught out well in the near future, for now I'll leave it there so I won't forget)
 - [ ] Weapon System
     - Will be added after Business System is finished
 - [ ] Drug System
