@@ -110,13 +110,28 @@
     - Accessories or Toys List: (This will be taught out well in the near future, for now I'll leave it there so I won't forget)
 - [ ] Weapon System
     - Will be added after Business System is finished
+    - All weapons along with there ammos will be added
+    - Non realistic but logically priced weapon and ammo
+    - Weapons and Ammos will be on different pages
 - [ ] Drug System
     - Will be added after Business System is finished
+    - Types: Pot, Crack
+        - Prices will be different
+        - Pot will effect a user through his vision, wavey vision, and wavey movements
+        - Crack will have high stamina but ones its consumption expires the user will not be able to jog and only maintain walk for an amount of time
 - [ ] Door System
     - Includes: Virtual and Interior Location
-            - Locks and Pass keys
-            - Names and Ownership
-    - Type: Normal Door
+    - Locks and Pass keys
+    - Names and Ownership
+    - Type: Normal Door, Government Doors, House Doors, Business Doors, VIP doors, Donator Doors, Admin Doors
+    - Normal Doors will be seldomly used in the server
+    - Government doors will have restriction to their users if they wish
+    - House Doors will also have restriction to their users if they wish: locks and passkeys
+    - Business Doors will have closing and opening. An owner can close anytime they want.
+    - Debating to myself if Business doors will close during sundays or will only operate half day.
+    (A good reason for this is Sundays should be family day, I don't care how people spend it but the server should also do this to encourage family day)
+    - The remaining doors will be restricted to regular players and to their various uses
+    - Doors will be removed according to their location ones a remap has been made.
 - [ ] Government System
     - Includes: Dynamic Door System(Type: Government Door)
         - Faction System
@@ -152,14 +167,57 @@
 - [ ] Business System
     - Includes: Dynamic Door System(Type: Business Door)
 - [ ] Vehicle System
+    - Will have fuel system
+    - Manual Vehicle settings
+    - Can be turned on using car keys
+    - Thinking of more ideas
 - [ ] Reward System
+    - Referral System Reward
+    - Deathmatch Reward
+    - Leveling up reward
+    - Being top deathmatcher in a week.
+    - Stunts(Ones I figure out how to create my own stunt system this will happen)
 - [ ] Admin System
+    - Three Types: General Public Admins(Helpers in some servers, but will function not just as helpers but will also be able to do some admin stuff at a minor level), General Group Admins(Factions, Gangs, and Other Group intended Admins) and General Admins(The main admins)
+    - GPA's will only have one rank and everyone answers to GA's
+    - GGA's will only have one rank and everyone answers to GA's
+    - GA's will have four ranks: Interim Admins, Senior Admins, Vice Admin, Server Admin
+    - GA's will only answer to Server Owner, directly.
 - [ ] Deathmatch System
+    - Basic one on one, two on two, five on five deathmatching in a controlled environment
+    - Team Deathmatches which will be higher than five and above
+    - Battle Royal
+    - All of this systems will have rewards for use to buy stuff
 - [ ] VIP and Donator System
     - VIP will be those who buys VIP on the system, Donator on the otherhand are those who contributed for the benefit of the server
     - VIP will have more privilege than Donators but will not have the special privilege commands
     - Donators will have Privilege Ranks: Bronze Donator, Silver Donator, Gold Donator
     - VIP will have four levels: VIP 1, VIP 2, VIP 3, VIP 4
+- [ ] Remapping
+    - The whole San Andreas map will be remapped according to its external design adding interior within
+    - Doors will be opened through pushes or by pressing F, depends on how my mind wants it
+    - Doors will also be able to restrict users from entering if they are not allowed
+    - Interiors will be made and some of this interiors will be made useable.(In theory its possible it depends on how heavy it is for everyone)
+    - Traffic Lights will be made fully functional and speed limits will be given cameras for monitor.(A need for speed idea)
+    - More ideas to be added
+- [ ] System Bots
+    - Bot names: Jester and Joker
+    - Jester functions as the mostly system checker and serious type bot
+    - Joker will be the dillusional and non-stop talkative bot, will talk for information to all.
+    - Will try to make them into deep learning ai's for sa-mp, although it might be a heavy loaded one.
+    - Will be aimed to become a helpful bot for all servers who wish to use them
+    - No they don't work together, they are not the same entity either, They are different personas
+- [ ] JJ Library
+    - Includes that does system checks, useful functions, anti-cheats, anti-hacks, anti-bugs
+    - Just like most libraries it is aimed to be useful for all servers
+    - Being debated, by myself, if it should be automatic or manually called as callbacks(for anti-cheats, anti-hacks, and anti-backs)
+    - Also still being debated if should be done during gamemode development or after development
+    - Also being debated if their should be a plugin or not.(but for some reason my brain decided it to be only include and should use memory hacks and stuff, and I'm dying just reading one line on the memory hacks being discussed through out the forums.)
 ## Contributors
     Lead Programmer
         - JesterlJoker
+
+## How can you help?
+- You can create a an issue as an suggestion
+[![GitHub issues](https://img.shields.io/github/issues/badges/shields.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project/issues/new)
+- You can also message me here [![Generic badge](https://img.shields.io/badge/SAMP-JesterlJoker-blue.svg?style=for-the-badge)](http://forum.sa-mp.com/member.php?u=256400)
