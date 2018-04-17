@@ -219,5 +219,8 @@
 
 ## How can you help?
 - You can create a an issue as an suggestion
-[![GitHub issues](https://img.shields.io/github/issues/badges/shields.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project/issues/new)
-- You can also message me here [![Generic badge](https://img.shields.io/badge/SAMP-JesterlJoker-blue.svg?style=for-the-badge)](http://forum.sa-mp.com/member.php?u=256400)
+
+[![GitHub issues](https://img.shields.io/github/issues/Naereen/StrapDown.js.svg?style=for-the-badge)](https://github.com/JesterlJoker/The-Four-Horsemen-Project/issues)
+- You can also message me here
+
+[![Generic badge](https://img.shields.io/badge/SAMP-JesterlJoker-blue.svg?style=for-the-badge)](http://forum.sa-mp.com/member.php?u=256400)
