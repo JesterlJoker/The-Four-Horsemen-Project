@@ -35,10 +35,10 @@ Moved Here - https://github.com/JesterlJoker/The-Four-Horsemen-Project/wiki/Ongo
     To support the project
 
 - Or you can also
- - Before you click the image below please click the link below and read what I have to say
+
     [![Generic badge](https://img.shields.io/badge/Patreon-PS-red.svg?style=for-the-badge)](https://www.patreon.com/posts/four-horsemen-18300905)
-    
-<a href="https://www.patreon.com/bePatron?u=9276933" data-patreon-widget-type="become-patron-button">Become a Patron!</a><script async src="https://c6.patreon.com/becomePatronButton.bundle.js"></script>
+
+    - This is a special message for you from me, before you do something about one of the two above. It will explain why I am using to platforms and such. I won't dive in too deep or the PS would be meaningless.
 
 - This gamemode is
 
