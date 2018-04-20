@@ -457,7 +457,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            new string[125 + 6];
+            new string[149 + 6];
             format(string, sizeof string, "{FFFFFF}Hi noob! I'm {FF0000}%s{FFFFFF}! and I'm here to lead you through the registration!\nCome now type your password below so we can get started.", DELUSIONAL_AI);
             Dialog_ShowCallback(playerid, using inline register_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Register", string, "Submit");
         }
@@ -563,7 +563,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_email, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "I'm back! I hate those types of dialogs. I can't speak through their list. Oh well!\nType in a valid email that must contain an @ and some periods to be valid.", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_email, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "{FFFFFF}I'm back! I hate those types of dialogs. I can't speak through their list. Oh well!\nType in a valid email that must contain an @ and some periods to be valid.", "Submit");
         }
         case EMAIL_INVALID:{
             inline register_email_invalid(pid, dialogid, response, listitem, string:inputtext[]){
@@ -582,7 +582,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_email_invalid, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "Gosh danggit! You typed an invalid email.\nYou must remember to add the @ and some periods to it i.e joker@tfhm.org", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_email_invalid, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "{FFFFFF}Gosh danggit! You typed an invalid email.\nYou must remember to add the @ and some periods to it i.e joker@tfhm.org", "Submit");
         }
         case EMAIL_TOO_SHORT:{
             inline register_email_short(pid, dialogid, response, listitem, string:inputtext[]){
@@ -601,7 +601,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_email_short, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "Ha! You got short there bud!\nEmails should not be shorter than 15 characters if you know what I mean.\nNote: Hi this is JJ speaking. If for some reason your email is shorter than 14 characters please do message us.", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_email_short, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "{FFFFFF}Ha! You got short there bud!\nEmails should not be shorter than 15 characters if you know what I mean.\nNote: Hi this is JJ speaking. If for some reason your email is shorter than 14 characters please do message us.", "Submit");
         }
         case REFERREDBY:{
             inline register_referral(pid, dialogid, response, listitem, string:inputtext[]){
@@ -615,7 +615,7 @@ PlayerDialog(playerid, dialog){
                     }else{PlayerDialog(playerid, REFERREDBY_DN_EXIST);}
                 }else{PlayerDialog(playerid, FIRSTNAME);}
             }
-            Dialog_ShowCallback(playerid, using inline register_referral, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "Now if you are feeling generous type in the person who invited  you into our server!\nOh boy both of you will get rewards for this.\nAhh yes! You should also remember that username's are very case-sensitive. \nOne miscapitalized letter or untyped character might give the reward to the wrong person.", "Submit", "Skip");
+            Dialog_ShowCallback(playerid, using inline register_referral, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "{FFFFFF}Now if you are feeling generous type in the person who invited  you into our server!\nOh boy both of you will get rewards for this.\nAhh yes! You should also remember that username's are very case-sensitive. \nOne miscapitalized letter or untyped character might give the reward to the wrong person.", "Submit", "Skip");
         }
         case REFERREDBY_DN_EXIST:{
             inline register_refferal_dne(pid, dialogid, response, listitem, string:inputtext[]){
@@ -630,7 +630,7 @@ PlayerDialog(playerid, dialog){
                 }else{PlayerDialog(playerid, FIRSTNAME);}
             }
             new string[223 + 7];
-            format(string, sizeof string, "Oh! I see. %s just told me, my super serious brother, that we have not found the person you are looking for, unfortunately.\nIf you have just mistyped it then feel free to retype the name below and this time, correctly.", SERIOUS_AI);
+            format(string, sizeof string, "{FFFFFF}Oh! I see. {00FF00}%s {FFFFFF}just told me, my super serious brother, that we have not found the person you are looking for, unfortunately.\nIf you have just mistyped it then feel free to retype the name below and this time, correctly.", SERIOUS_AI);
             Dialog_ShowCallback(playerid, using inline register_refferal_dne, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", string, "Submit", "Skip");
         }
         case FIRSTNAME:{
@@ -647,7 +647,7 @@ PlayerDialog(playerid, dialog){
                 }
             }
             new string[168 + 6 + 7 + 5];
-            format(string, sizeof string, "Oh! You've come to far to quit do ya?\nNow let's get to know you, since I introduced myself earlier. Remember that names starting with %s, %s, %s is forbidden.", SERIOUS_AI, DELUSIONAL_AI, OWNER);
+            format(string, sizeof string, "{FFFFFF}Oh! You've come to far to quit do ya?\nNow let's get to know you, since I introduced myself earlier. Remember that names starting with %s, %s, %s is forbidden.", SERIOUS_AI, DELUSIONAL_AI, OWNER);
             Dialog_ShowCallback(playerid, using inline register_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Oh! You've come to far to quit do ya?\nNow let's get to know you, since I introduced myself earlier. Remember that names starting with Jester, Joker, Earl is forbidden.", "Submit");
         }
         case INVALID_FIRSTNAME:{
@@ -664,7 +664,7 @@ PlayerDialog(playerid, dialog){
                 }
             }
             new string[251 + 11];
-            format(string, sizeof string, "Ah! Hehehe my bad. Your Firstname should be not longer than %d characters and shorter than 4 characters\nNote: Hi it's me again. Capitalizing the name is not a must since the system would save the first letter of the name to be capitalized", MAX_LASTNAME);
+            format(string, sizeof string, "{FFFFFF}Ah! Hehehe my bad. Your Firstname should be not longer than %d characters and shorter than 4 characters\nNote: Hi it's me again. Capitalizing the name is not a must since the system would save the first letter of the name to be capitalized", MAX_LASTNAME);
             Dialog_ShowCallback(playerid, using inline register_invalid_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", string, "Submit");
         }
         case LASTNAME:{
@@ -681,8 +681,8 @@ PlayerDialog(playerid, dialog){
                 }
             }
             new string[495 + 6 + 6];
-            format(string, sizeof string, "And finally your lastname\nNote: Sorry for interrupting %s so much but I need to tell you something.\nThis server have firstname_middlename_lastname format in which noobs, like you will only have firstname_lastname\n\
-            The middlename is intended after marriage, if you are a female, or if you get adopted by a family.\nNote %s: Although boss would like it if you buy a middlename from him.\nMiddlename's will be the first letter only but you need to type in a literal middlename", DELUSIONAL_AI, DELUSIONAL_AI);
+            format(string, sizeof string, "{FFFFFF}And finally your lastname\nNote: Sorry for interrupting %s so much but I need to tell you something.\nThis server have firstname_middlename_lastname format in which noobs, like you will only have firstname_lastname\n\
+            The middlename is intended after marriage, if you are a female, or if you get adopted by a family.\nNote {FF0000}%s{FFFFFF}: Although boss would like it if you buy a middlename from him.\nMiddlename's will be the first letter only but you need to type in a literal middlename", DELUSIONAL_AI, DELUSIONAL_AI);
             Dialog_ShowCallback(playerid, using inline register_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", string, "Submit");
         }
         case INVALID_LASTNAME:{
@@ -698,12 +698,12 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_invalid_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "We've already told you about the format already.\nYou just want me to keep talking do you...\nType it again, now properly.", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_invalid_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "{FFFFFF}We've already told you about the format already.\nYou just want me to keep talking do you...\nType it again, now properly.", "Submit");
         }
         case LOGIN:{
             new string[104 + MAX_USERNAME + 7];
             format(string, sizeof string, "Welcome back %s.\n\
-            This is %s. Please properly type in your password below. You will be logged in immediately.", PlayerData[playerid][username], SERIOUS_AI);
+            {FFFFFF}This is {00FF00}%s. {FFFFFF}Please properly type in your password below. You will be logged in immediately.", PlayerData[playerid][username], SERIOUS_AI);
             inline login(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
@@ -722,7 +722,7 @@ PlayerDialog(playerid, dialog){
         case INVALID_LOGIN:{
             new string[167 + MAX_USERNAME];
             format(string, sizeof string, "Welcome back %s.\n\
-            You have type an incorrect password.\nPlease do remember that passwords are also case-sensitve so please type your password properly.", PlayerData[playerid][username]);
+            {FFFFFF}You have type an incorrect password.\nPlease do remember that passwords are also case-sensitve so please type your password properly.", PlayerData[playerid][username]);
             inline login(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
