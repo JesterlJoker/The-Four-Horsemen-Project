@@ -13,8 +13,8 @@ dependencies:
 - Southclaws/progress2
 - pBlueG/SA-MP-MySQL
 - maddinat0r/sscanf
-- oscar-broman/sqlitei
-- RogueDrifter/Anti_cheat_pack
+- maddinat0r/samp-discord-connector
+
 runtime:
   mode: main
 contributor:
@@ -26,3 +26,6 @@ indirect contributor:
 - oscar browman - sqlitei
 - pBlueG - MySQL
 - Southclaws - sampctl, progress2
+extra:
+  discord_bot_token: NDA4MTU2MTEwNDcwNzc0Nzg0.Dbnb2Q.5-WcBe-d-6lgtuA3p8yqMO9f6H0
+  useartwork: Yes
