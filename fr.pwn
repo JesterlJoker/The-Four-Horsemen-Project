@@ -798,6 +798,63 @@ PlayerDialog(playerid, dialog){
             }
             Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Confirm Password", "And I was expecting that really... It's okay though.\nJust type it again and make sure to correct it this time.", "Submit");
         }
+        case CONFIRM_EMAIL:{
+            inline confirm_email(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 14){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
+                            format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
+                            PlayerDialog(playerid, REFERREDBY);
+                        }else{
+                            PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
+                        }
+                    }
+                    else{
+                        PlayerDialog(playerid, CONFIRM_EMAILSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Enter your email", "Submit");
+        }
+        case CONFIRM_EMAILSHORT:{
+            inline confirm_email(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 14){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
+                            format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
+                            PlayerDialog(playerid, REFERREDBY);
+                        }else{
+                            PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
+                        }
+                    }
+                    else{
+                        PlayerDialog(playerid, CONFIRM_EMAILSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is too short type it again.", "Submit");
+        }
+        case CONFIRM_EMAIL_INVALID:{
+            inline confirm_email(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 14){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
+                            format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
+                            PlayerDialog(playerid, REFERREDBY);
+                        }else{
+                            PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
+                        }
+                    }
+                    else{
+                        PlayerDialog(playerid, CONFIRM_EMAILSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is invalid it should have an '@' and '.'", "Submit");
+        }
     }
     return 1;
 }
