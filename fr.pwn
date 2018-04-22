@@ -32,7 +32,7 @@
 
 #define                                 MAX_USERNAME                        (MAX_PLAYER_NAME + 1)
 #define                                 MAX_PASS                            (65)
-#define                                 MAX_SALT                            (16)
+#define                                 MAX_SALT                            (17)
 //#define                                 MAX_DATE                          (18)
 #define                                 MAX_EMAIL                           (65)
 #define                                 MAX_SLOT                            (13)
@@ -151,7 +151,7 @@ new
     //DCC_Channel: dc
 
     Text:MainMenu[5],
-    PlayerText:AfterRegister[MAX_PLAYERS][17]
+    PlayerText:AfterRegister[MAX_PLAYERS][18]
     ;
 
 /*SetVehicleParam(vehicleid, type){
@@ -329,7 +329,6 @@ AccountQuery(playerid, query){
         }
         case LOAD_CREDENTIALS:{
             inline Load_Account(string:name[], string:value[]){
-                print("[JOKER SYSTEM] Checking Credential Inline");
                 INI_String("password", PlayerData[playerid][password]);
                 INI_String("salt", PlayerData[playerid][salt]);
             }
@@ -467,6 +466,16 @@ AccountQuery(playerid, query){
     return 1;
 }
 
+doSalt(playerid){
+    for(new i = 0, j = MAX_SALT; i < j; i++)
+    {
+        // storing random character in every slot of our salt array
+        PlayerData[playerid][salt][i] = random(79) + 47;
+    }
+    PlayerData[playerid][salt][MAX_SALT-1] = 0;
+    return 1;
+}
+
 PlayerDialog(playerid, dialog){
     switch(dialog){
         case REGISTER:{
@@ -474,11 +483,7 @@ PlayerDialog(playerid, dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
-                        for(new i = 0, j = MAX_SALT; i < j; i++)
-                        {
-                            // storing random character in every slot of our salt array
-                            PlayerData[playerid][salt][i] = random(79) + 47;
-                        }
+                        doSalt(playerid);
                         format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
                         PlayerDialog(playerid, BIRTHMONTH);
                     }else{
@@ -495,11 +500,7 @@ PlayerDialog(playerid, dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
-                        for(new i = 0, j = MAX_SALT; i < j; i++)
-                        {
-                            // storing random character in every slot of our salt array
-                            PlayerData[playerid][salt][i] = random(79) + 47;
-                        }
+                        doSalt(playerid);
                         format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
                         PlayerDialog(playerid, BIRTHMONTH);
                     }else{
@@ -799,7 +800,7 @@ PlayerDialog(playerid, dialog){
             Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Confirm Password", "And I was expecting that really... It's okay though.\nJust type it again and make sure to correct it this time.", "Submit");
         }
         case CONFIRM_EMAIL:{
-            inline confirm_email(pid, dialogid, response, listitem, string:inputtext[]){
+            inline confirm_password(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
@@ -818,7 +819,7 @@ PlayerDialog(playerid, dialog){
             Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Enter your email", "Submit");
         }
         case CONFIRM_EMAILSHORT:{
-            inline confirm_email(pid, dialogid, response, listitem, string:inputtext[]){
+            inline confirm_emailshort(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
@@ -834,10 +835,10 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is too short type it again.", "Submit");
+            Dialog_ShowCallback(playerid, using inline confirm_emailshort, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is too short type it again.", "Submit");
         }
         case CONFIRM_EMAIL_INVALID:{
-            inline confirm_email(pid, dialogid, response, listitem, string:inputtext[]){
+            inline confirm_emailinvalid(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) > 14){
@@ -853,7 +854,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is invalid it should have an '@' and '.'", "Submit");
+            Dialog_ShowCallback(playerid, using inline confirm_emailinvalid, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is invalid it should have an '@' and '.'", "Submit");
         }
     }
     return 1;
@@ -1030,7 +1031,7 @@ Textdraws(playerid, type, textdrawtype){
                     TextDrawSetProportional(MainMenu[3], 1);
                     TextDrawSetShadow(MainMenu[3], 0);
 
-                    MainMenu[4] = TextDrawCreate(298.000061, 408.773376, "Copyrights The Four Horsemen Project. All Rights Reserved.");
+                    MainMenu[4] = TextDrawCreate(298.000061, 408.773376, "Project is made for the benefit and fun of the SA-MP community");
                     TextDrawLetterSize(MainMenu[4], 0.400000, 1.600000);
                     TextDrawAlignment(MainMenu[4], 2);
                     TextDrawColor(MainMenu[4], -1);
@@ -1046,16 +1047,16 @@ Textdraws(playerid, type, textdrawtype){
         case PLAYER_TEXTDRAWS:{
             switch(textdrawtype){
                 case AFTER_REGISTER:{
-                    AfterRegister[playerid][0] = CreatePlayerTextDraw(playerid, 25.999938, 129.520019, "box");
-                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][0], 0.000000, 17.439998);
+                    AfterRegister[playerid][0] = CreatePlayerTextDraw(playerid, 25.999937, 129.520019, "box");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][0], 0.000000, 19.839996);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][0], 243.000000, 0.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][0], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][0], -1);
                     PlayerTextDrawUseBox(playerid, AfterRegister[playerid][0], 1);
-                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][0], 170);
+                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][0], 255);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][0], 0);
                     PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][0], 0);
-                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][0], 170);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][0], 255);
                     PlayerTextDrawFont(playerid, AfterRegister[playerid][0], 1);
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][0], 1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][0], 0);
@@ -1083,7 +1084,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][2], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][2], 0);
 
-                    AfterRegister[playerid][3] = CreatePlayerTextDraw(playerid, 27.600034, 152.666625, "Username: Joker29");
+                    AfterRegister[playerid][3] = CreatePlayerTextDraw(playerid, 28.400037, 157.146591, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][3], 0.400000, 1.600000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][3], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][3], -1);
@@ -1093,10 +1094,10 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawFont(playerid, AfterRegister[playerid][3], 1);
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][3], 1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][3], 0);
-                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][3], true);
 
-                    AfterRegister[playerid][4] = CreatePlayerTextDraw(playerid, 28.400035, 169.093276, "Password: Alterego29");
+                    AfterRegister[playerid][4] = CreatePlayerTextDraw(playerid, 27.600036, 178.799987, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][4], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][4], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][4], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][4], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][4], 0);
@@ -1107,8 +1108,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][4], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][4], true);
 
-                    AfterRegister[playerid][5] = CreatePlayerTextDraw(playerid, 27.600030, 184.026702, "Email: laternoobs@gmail.com");
+                    AfterRegister[playerid][5] = CreatePlayerTextDraw(playerid, 26.800031, 199.706726, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][5], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][5], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][5], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][5], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][5], 0);
@@ -1119,8 +1121,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][5], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][5], true);
 
-                    AfterRegister[playerid][6] = CreatePlayerTextDraw(playerid, 28.400030, 199.706756, "Birthdate: 04-22-1996");
+                    AfterRegister[playerid][6] = CreatePlayerTextDraw(playerid, 27.600030, 220.613464, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][6], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][6], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][6], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][6], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][6], 0);
@@ -1131,8 +1134,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][6], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][6], true);
 
-                    AfterRegister[playerid][7] = CreatePlayerTextDraw(playerid, 28.400032, 214.640182, "Character Name: Earl Tacogdoy");
+                    AfterRegister[playerid][7] = CreatePlayerTextDraw(playerid, 28.400030, 242.266906, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][7], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][7], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][7], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][7], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][7], 0);
@@ -1143,13 +1147,11 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][7], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][7], true);
 
-                    AfterRegister[playerid][8] = CreatePlayerTextDraw(playerid, 129.999969, 264.666687, "Confirm");
+                    AfterRegister[playerid][8] = CreatePlayerTextDraw(playerid, 129.999969, 290.053405, "Confirm");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][8], 0.400000, 1.600000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][8], 0.000000, 58.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][8], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][8], 2);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][8], -1);
-                    PlayerTextDrawUseBox(playerid, AfterRegister[playerid][8], 1);
-                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][8], 255);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][8], 0);
                     PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][8], 1);
                     PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][8], 255);
@@ -1158,7 +1160,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][8], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][8], true);
 
-                    AfterRegister[playerid][9] = CreatePlayerTextDraw(playerid, 96.200004, 261.773406, "LD_SPAC:white");
+                    AfterRegister[playerid][9] = CreatePlayerTextDraw(playerid, 97.000015, 287.160217, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][9], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][9], 1.000000, 20.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][9], 1);
@@ -1170,7 +1172,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][9], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][9], 0);
 
-                    AfterRegister[playerid][10] = CreatePlayerTextDraw(playerid, 161.800033, 261.773406, "LD_SPAC:white");
+                    AfterRegister[playerid][10] = CreatePlayerTextDraw(playerid, 161.800033, 287.160217, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][10], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][10], 1.000000, 20.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][10], 1);
@@ -1182,7 +1184,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][10], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][10], 0);
 
-                    AfterRegister[playerid][11] = CreatePlayerTextDraw(playerid, 96.999961, 261.773376, "LD_SPAC:white");
+                    AfterRegister[playerid][11] = CreatePlayerTextDraw(playerid, 96.999961, 287.160064, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][11], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][11], 66.000000, 1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][11], 1);
@@ -1194,7 +1196,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][11], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][11], 0);
 
-                    AfterRegister[playerid][12] = CreatePlayerTextDraw(playerid, 96.999954, 281.186767, "LD_SPAC:white");
+                    AfterRegister[playerid][12] = CreatePlayerTextDraw(playerid, 96.999954, 307.320159, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][12], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][12], 66.000000, 1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][12], 1);
@@ -1206,9 +1208,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][12], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][12], 0);
 
-                    AfterRegister[playerid][13] = CreatePlayerTextDraw(playerid, 21.799983, 125.133331, "LD_SPAC:white");
+                    AfterRegister[playerid][13] = CreatePlayerTextDraw(playerid, 21.799982, 125.133331, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][13], 0.000000, 0.000000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][13], 1.000000, 164.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][13], 1.000000, 186.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][13], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][13], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][13], 0);
@@ -1220,7 +1222,7 @@ Textdraws(playerid, type, textdrawtype){
 
                     AfterRegister[playerid][14] = CreatePlayerTextDraw(playerid, 245.000091, 125.133331, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][14], 0.000000, 0.000000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][14], 2.000000, 164.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][14], 1.000000, 185.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][14], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][14], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][14], 0);
@@ -1232,7 +1234,7 @@ Textdraws(playerid, type, textdrawtype){
 
                     AfterRegister[playerid][15] = CreatePlayerTextDraw(playerid, 21.799991, 126.626647, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][15], 0.000000, 0.000000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][15], 223.000000, -1.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][15], 224.000000, 1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][15], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][15], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][15], 0);
@@ -1242,7 +1244,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][15], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][15], 0);
 
-                    AfterRegister[playerid][16] = CreatePlayerTextDraw(playerid, 22.599992, 289.400115, "LD_SPAC:white");
+                    AfterRegister[playerid][16] = CreatePlayerTextDraw(playerid, 23.399990, 311.800262, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][16], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][16], 223.000000, -1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][16], 1);
@@ -1253,6 +1255,19 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawFont(playerid, AfterRegister[playerid][16], 4);
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][16], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][16], 0);
+
+                    AfterRegister[playerid][17] = CreatePlayerTextDraw(playerid, 28.400009, 263.173522, "Referredby: Jester");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][17], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][17], 241.869995, 10.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][17], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][17], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][17], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][17], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][17], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][17], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][17], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][17], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][17], true);
                 }
             }
         }
@@ -1268,7 +1283,7 @@ ShowTextDrawForPlayer(playerid, type){
             }
         }
         case AFTERREGISTERFORPLAYER:{
-            Textdraws(playerid, GLOBAL_TEXTDRAWS, AFTER_REGISTER);
+            Textdraws(playerid, PLAYER_TEXTDRAWS, AFTER_REGISTER);
             new string[12 + MAX_PASS];
             format(string, sizeof string, "Username: %s", PlayerData[playerid][username]);
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][3], string);
@@ -1280,7 +1295,9 @@ ShowTextDrawForPlayer(playerid, type){
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][6], string);
             format(string, sizeof string, "Character Name: %s %s", PlayerData[playerid][email]);
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][7], string);
-            for(new i = 0, j = 17; i < j; i++){
+            format(string, sizeof string, "Referredby: %s", PlayerData[playerid][referredby]);
+            PlayerTextDrawSetString(playerid, AfterRegister[playerid][17], string);
+            for(new i = 0, j = 18; i < j; i++){
                 PlayerTextDrawShow(playerid, AfterRegister[playerid][i]);
             }
             SelectTextDraw(playerid, 0xFFFFFF);
@@ -1297,7 +1314,7 @@ HideTextDrawForPlayer(playerid, type){
             }
         }
         case AFTERREGISTERFORPLAYER:{
-            for(new i = 0, j = 17; i < j; i++){
+            for(new i = 0, j = 18; i < j; i++){
                 PlayerTextDrawDestroy(playerid, AfterRegister[playerid][i]);
             }
         }
@@ -1429,6 +1446,7 @@ public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid){
     else if(playertextid == AfterRegister[playerid][8]){
         SHA256_PassHash(PlayerData[playerid][password], PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
         SaveAllPlayerFiles(playerid);
+        doSpawnPlayer(playerid, SPAWN_PLAYER);
     }
     return 1;
 }
