@@ -18,6 +18,7 @@
 #include                                <YSI\y_timers>
 
 #include                                <sscanf2>
+//#include                                <discord-connector>
 
 #define                                 BitFlag_Get(%0,%1)                  ((%0) & (%1))   // Returns zero (false) if the flag isn't set.
 #define                                 BitFlag_On(%0,%1)                   ((%0) |= (%1))  // Turn on a flag.
@@ -26,9 +27,6 @@
 
 #define                                 SCM                                 SendClientMessage
 #define                                 SCMTA                               SendClientMessageToAll
-#define                                 sql_get_string                      db_get_field_assoc
-#define                                 sql_get_int                         db_get_field_assoc_int
-#define                                 sql_get_float                       db_get_field_assoc_float
 #define                                 GivePlayerCash(%0, %1)              PlayerData[%0][cash]+=%1
 #define                                 GivePlayerCoins(%0, %1)             PlayerData[%0][coins]+=%1
 
@@ -47,9 +45,9 @@
 enum pInfo{
     // Account Data
     username[MAX_USERNAME],
+    email[MAX_EMAIL],
     password[MAX_PASS],
     salt[MAX_SALT],
-    email[MAX_EMAIL],
     birthmonth,
     birthdate,
     birthyear,
@@ -113,7 +111,10 @@ enum pInfo{
 }
 
 enum PlayerFlags:(<<= 1) {
-    LOGGED_IN_PLAYER = 1
+    LOGGED_IN_PLAYER = 1,
+    PLAYER_IS_DYING,
+    PLAYER_IS_DEAD,
+    PLAYER_IS_ONDM
 }
 
 enum {
@@ -125,15 +126,32 @@ enum {
     // Dialog Enums
     LOGIN, INVALID_LOGIN, REGISTER, REGISTER_TOO_SHORT, BIRTHMONTH, BIRTHDATE, BIRTHYEAR, EMAIL, EMAIL_INVALID,
     EMAIL_TOO_SHORT, REFERREDBY, REFERREDBY_DN_EXIST, FIRSTNAME, INVALID_FIRSTNAME, LASTNAME, INVALID_LASTNAME,
+    CONFIRM_PASSWORD, CONFIRM_PASSWORDSHORT, CONFIRM_BIRTHMONTH, CONFIRM_BIRTHDATE, CONFIRM_BIRTHYEAR, 
+    CONFIRM_EMAIL, CONFIRM_EMAILSHORT, CONFIRM_EMAIL_INVALID, CONFIRM_FIRSTNAME, CONFIRM_INVALIDFIRSTNAME, 
+    CONFIRM_LASTNAME, CONFIRM_INVALIDLASTNAME,
 
     //Spawn Enums
-    SPAWN_PLAYER, REVIVE_PLAYER
+    SPAWN_PLAYER, REVIVE_PLAYER,
+
+    //Delay Enums
+    DELAYED_KICK,
+
+    //Textdraw enums
+    // Types
+    GLOBAL_TEXTDRAWS, PLAYER_TEXTDRAWS,
+    // Global/Player
+    MAIN_MENU, AFTER_REGISTER,
+    // Show/Hide
+    MAINMENUFORPLAYER, AFTERREGISTERFORPLAYER
 }
 
 new 
     PlayerData[MAX_PLAYERS][pInfo],
     PlayerFlags: PlayerFlag[MAX_PLAYERS char],
-    DB: database
+    //DCC_Channel: dc
+
+    Text:MainMenu[5],
+    PlayerText:AfterRegister[MAX_PLAYERS][17]
     ;
 
 /*SetVehicleParam(vehicleid, type){
@@ -193,15 +211,24 @@ UserFaultFilePath(playerid){
 }
 
 SaveAllPlayerFiles(playerid){
-    return AccountQuery(playerid, SAVE_ACCOUNT), AccountQuery(playerid, SAVE_DATA),
+    PlayerData[playerid][virtualworld] = GetPlayerVirtualWorld(playerid),
+    PlayerData[playerid][interiorid] = GetPlayerInterior(playerid),
+    GetPlayerPos(playerid, PlayerData[playerid][x], PlayerData[playerid][y], PlayerData[playerid][z]),
+    GetPlayerFacingAngle(playerid, PlayerData[playerid][a]),
+    GetPlayerHP(playerid), GetPlayerArmor(playerid);
+    for(new i = 0, j = MAX_SLOT; i < j; i++){
+        GetPlayerWeaponData(playerid, i, PlayerData[playerid][weapons][i], PlayerData[playerid][ammo][i]);
+    }
+    AccountQuery(playerid, SAVE_ACCOUNT), AccountQuery(playerid, SAVE_DATA),
     AccountQuery(playerid, SAVE_JOB), AccountQuery(playerid, SAVE_WEAPON),
-    AccountQuery(playerid, SAVE_PENALTIES), 1;
+    AccountQuery(playerid, SAVE_PENALTIES); return 1;
 }
 
 LoadAllPlayerFiles(playerid){
-    return AccountQuery(playerid, LOAD_ACCOUNT), AccountQuery(playerid, LOAD_DATA),
+    AccountQuery(playerid, LOAD_ACCOUNT), AccountQuery(playerid, LOAD_DATA),
     AccountQuery(playerid, LOAD_JOB), AccountQuery(playerid, LOAD_WEAPONS),
-    AccountQuery(playerid, LOAD_PENALTIES), 1;
+    AccountQuery(playerid, LOAD_PENALTIES);
+    return 1;
 }
 
 AccountQuery(playerid, query){
@@ -215,6 +242,7 @@ AccountQuery(playerid, query){
             INI_WriteInt(File, "monthloggedin", PlayerData[playerid][monthloggedin]);
             INI_WriteInt(File, "yearregistered", PlayerData[playerid][yearregistered]);
             INI_WriteInt(File, "dateregistered", PlayerData[playerid][dateregistered]);
+            INI_WriteInt(File, "monthregistered", PlayerData[playerid][monthregistered]);
             INI_WriteInt(File, "birthyear", PlayerData[playerid][birthyear]);
             INI_WriteInt(File, "birthdate", PlayerData[playerid][birthdate]);
             INI_WriteInt(File, "birthmonth", PlayerData[playerid][birthmonth]);
@@ -226,7 +254,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_DATA:{
             new INI: File = INI_Open(UserDataFilePath(playerid));
-
+            
             INI_SetTag(File, "Data");
             INI_WriteInt(File, "virtualworld", PlayerData[playerid][virtualworld]);
             INI_WriteInt(File, "interiorid", PlayerData[playerid][interiorid]);
@@ -269,6 +297,7 @@ AccountQuery(playerid, query){
         case SAVE_WEAPON:{
             new INI:File = INI_Open(UserWeaponFilePath(playerid));
 
+            INI_SetTag(File, "Weapons");
             INI_WriteInt(File, "armedweapon", PlayerData[playerid][armedweapon]);
             for(new i = MAX_SLOT-1, j = 0; i > j; i--){
                 new string[11+2];
@@ -283,6 +312,7 @@ AccountQuery(playerid, query){
         case SAVE_PENALTIES:{
             new INI:File = INI_Open(UserFaultFilePath(playerid));
 
+            INI_SetTag(File, "Penalties");
             INI_WriteInt(File, "penalties", PlayerData[playerid][penalties]);
             INI_WriteInt(File, "kicks", PlayerData[playerid][kicks]);
             INI_WriteInt(File, "warnings", PlayerData[playerid][warnings]);
@@ -298,11 +328,12 @@ AccountQuery(playerid, query){
             INI_Close(File);
         }
         case LOAD_CREDENTIALS:{
-            inline Load_Credentials(string:name[], string:value[]){
+            inline Load_Account(string:name[], string:value[]){
+                print("[JOKER SYSTEM] Checking Credential Inline");
                 INI_String("password", PlayerData[playerid][password]);
                 INI_String("salt", PlayerData[playerid][salt]);
             }
-            INI_ParseFile(UserAccFilePath(playerid), using inline Load_Credentials);
+            INI_ParseFile(UserAccFilePath(playerid), using inline "Load_Account");
         }
         case LOAD_ACCOUNT:{
             inline Load_Account(string:name[], string:value[]){
@@ -319,7 +350,7 @@ AccountQuery(playerid, query){
                 INI_Int("dateloggedin", PlayerData[playerid][dateloggedin]);
                 INI_Int("yearloggedin", PlayerData[playerid][yearloggedin]);
             }
-            INI_ParseFile(UserAccFilePath(playerid), using inline Load_Account);
+            INI_ParseFile(UserAccFilePath(playerid), using inline "Load_Account");
         }
         case LOAD_DATA:{
             inline Load_Data(string:name[], string:value[]){
@@ -347,7 +378,7 @@ AccountQuery(playerid, query){
                 INI_Int("interiorid", PlayerData[playerid][interiorid]);
                 INI_Int("virtualworld", PlayerData[playerid][virtualworld]);
             }
-            INI_ParseFile(UserAccFilePath(playerid), using inline Load_Data);
+            INI_ParseFile(UserAccFilePath(playerid), using inline "Load_Data");
         }
         case LOAD_JOB:{
             inline Load_Job(string:name[], string:value[]){
@@ -357,7 +388,7 @@ AccountQuery(playerid, query){
                 INI_Int("smithingskill", PlayerData[playerid][smithingskill]);
                 INI_Int("deliveryskill", PlayerData[playerid][deliveryskill]);
             }
-            INI_ParseFile(UserJobFilePath(playerid), using inline Load_Job);
+            INI_ParseFile(UserJobFilePath(playerid), using inline "Load_Job");
         }
         case LOAD_WEAPONS:{
             inline Load_Weapons(string:name[], string:value[]){
@@ -370,7 +401,7 @@ AccountQuery(playerid, query){
                 }
                 INI_Int("armedweapon", PlayerData[playerid][armedweapon]);
             }
-            INI_ParseFile(UserWeaponFilePath(playerid), using inline Load_Weapons);
+            INI_ParseFile(UserWeaponFilePath(playerid), using inline "Load_Weapons");
         }
         case LOAD_PENALTIES:{
             inline Load_Penalties(string:name[], string:value[]){
@@ -386,13 +417,13 @@ AccountQuery(playerid, query){
                 INI_Int("kicks", PlayerData[playerid][kicks]);
                 INI_Int("penalties", PlayerData[playerid][penalties]);
             }
-            INI_ParseFile(UserFaultFilePath(playerid), using inline Load_Penalties);
+            INI_ParseFile(UserFaultFilePath(playerid), using inline "Load_Penalties");
         }
         case EMPTY_DATA:{
             // Emptying Account Data
-            format(PlayerData[playerid][username], MAX_USERNAME, "");
-            format(PlayerData[playerid][password], MAX_PASS, "");
-            format(PlayerData[playerid][email], MAX_EMAIL, "");
+            format(PlayerData[playerid][username], MAX_USERNAME, ""),
+            format(PlayerData[playerid][password], MAX_PASS, ""),
+            format(PlayerData[playerid][email], MAX_EMAIL, ""),
             format(PlayerData[playerid][salt], MAX_SALT, "");
             PlayerData[playerid][birthmonth] = PlayerData[playerid][birthdate] = PlayerData[playerid][birthyear] = 
             PlayerData[playerid][monthregistered] = PlayerData[playerid][dateregistered] = PlayerData[playerid][yearregistered] =
@@ -401,6 +432,7 @@ AccountQuery(playerid, query){
             //Emptying Character Data
             format(PlayerData[playerid][firstname], MAX_FIRSTNAME, ""), format(PlayerData[playerid][middlename], MAX_MIDDLENAME, ""),
             format(PlayerData[playerid][lastname], MAX_LASTNAME, "");
+            PlayerData[playerid][health] = 100.0; PlayerData[playerid][armor] = 0.00;
             PlayerData[playerid][exp] = 1;
             PlayerData[playerid][meleekill] = PlayerData[playerid][handgunkill] = PlayerData[playerid][shotgunkill] = 
             PlayerData[playerid][smgkill] = PlayerData[playerid][riflekill] = PlayerData[playerid][sniperkill] =
@@ -435,13 +467,6 @@ AccountQuery(playerid, query){
     return 1;
 }
 
-doSalt(playerid){
-    for(new i = 0, j = MAX_SALT; i < j; i++){
-        format(PlayerData[playerid][salt][i], MAX_SALT, "%d", random(9));
-    }
-    return 1;
-}
-
 PlayerDialog(playerid, dialog){
     switch(dialog){
         case REGISTER:{
@@ -449,8 +474,12 @@ PlayerDialog(playerid, dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
-                        doSalt(playerid);
-                        SHA256_PassHash(inputtext, PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
+                        for(new i = 0, j = MAX_SALT; i < j; i++)
+                        {
+                            // storing random character in every slot of our salt array
+                            PlayerData[playerid][salt][i] = random(79) + 47;
+                        }
+                        format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
                         PlayerDialog(playerid, BIRTHMONTH);
                     }else{
                         PlayerDialog(playerid, REGISTER_TOO_SHORT);
@@ -466,8 +495,12 @@ PlayerDialog(playerid, dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
-                        doSalt(playerid);
-                        SHA256_PassHash(inputtext, PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
+                        for(new i = 0, j = MAX_SALT; i < j; i++)
+                        {
+                            // storing random character in every slot of our salt array
+                            PlayerData[playerid][salt][i] = random(79) + 47;
+                        }
+                        format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
                         PlayerDialog(playerid, BIRTHMONTH);
                     }else{
                         PlayerDialog(playerid, REGISTER_TOO_SHORT);
@@ -637,8 +670,7 @@ PlayerDialog(playerid, dialog){
             inline register_firstname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
-                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_FIRSTNAME){
-                        format(inputtext[0], MAX_FIRSTNAME, "%s", inputtext[0]);
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_FIRSTNAME){
                         format(PlayerData[playerid][firstname], MAX_FIRSTNAME, "%s", inputtext);
                         PlayerDialog(playerid, LASTNAME);
                     }else{
@@ -648,14 +680,13 @@ PlayerDialog(playerid, dialog){
             }
             new string[168 + 6 + 7 + 5];
             format(string, sizeof string, "{FFFFFF}Oh! You've come to far to quit do ya?\nNow let's get to know you, since I introduced myself earlier. Remember that names starting with %s, %s, %s is forbidden.", SERIOUS_AI, DELUSIONAL_AI, OWNER);
-            Dialog_ShowCallback(playerid, using inline register_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "Oh! You've come to far to quit do ya?\nNow let's get to know you, since I introduced myself earlier. Remember that names starting with Jester, Joker, Earl is forbidden.", "Submit");
+            Dialog_ShowCallback(playerid, using inline register_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", string, "Submit");
         }
         case INVALID_FIRSTNAME:{
             inline register_invalid_firstname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
-                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_FIRSTNAME){
-                        format(inputtext[0], MAX_FIRSTNAME, "%s", inputtext[0]);
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_FIRSTNAME){
                         format(PlayerData[playerid][firstname], MAX_FIRSTNAME, "%s", inputtext);
                         PlayerDialog(playerid, LASTNAME);
                     }else{
@@ -671,10 +702,10 @@ PlayerDialog(playerid, dialog){
             inline register_lastname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
-                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_LASTNAME){
-                        format(inputtext[0], MAX_LASTNAME, "%s", inputtext[0]);
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_LASTNAME){
+                        getdate(PlayerData[playerid][yearregistered], PlayerData[playerid][monthregistered], PlayerData[playerid][dateregistered]);
                         format(PlayerData[playerid][lastname], MAX_LASTNAME, "%s", inputtext);
-                        SaveAllPlayerFiles(playerid);
+                        ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
                     }else{
                         PlayerDialog(playerid, INVALID_LASTNAME);
                     }
@@ -689,10 +720,10 @@ PlayerDialog(playerid, dialog){
             inline register_invalid_lastname(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
-                    if(strlen(inputtext) > 4 && strlen(inputtext) < MAX_LASTNAME){
-                        format(inputtext[0], MAX_LASTNAME, "%s", inputtext[0]);
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_LASTNAME){
+                        getdate(PlayerData[playerid][yearregistered], PlayerData[playerid][monthregistered], PlayerData[playerid][dateregistered]);
                         format(PlayerData[playerid][lastname], MAX_LASTNAME, "%s", inputtext);
-                        SaveAllPlayerFiles(playerid);
+                        ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
                     }else{
                         PlayerDialog(playerid, INVALID_LASTNAME);
                     }
@@ -710,6 +741,7 @@ PlayerDialog(playerid, dialog){
                     new hash[MAX_PASS];
                     SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_SALT);
                     if(strcmp(PlayerData[playerid][password], hash) == 0){
+                        getdate(PlayerData[playerid][yearloggedin], PlayerData[playerid][monthloggedin], PlayerData[playerid][dateloggedin]);
                         LoadAllPlayerFiles(playerid);
                         doSpawnPlayer(playerid, SPAWN_PLAYER);
                     }else{
@@ -738,6 +770,34 @@ PlayerDialog(playerid, dialog){
             }
             Dialog_ShowCallback(playerid, using inline login, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Login", string, "Submit");
         }
+        case CONFIRM_PASSWORD:{
+            inline confirm_password(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
+                        format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
+                        ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+                    }else{
+                        PlayerDialog(playerid, CONFIRM_PASSWORDSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Confirm Password", "So you wish to change your password\nJust remember to follow the password length and rules", "Submit");
+        }
+        case CONFIRM_PASSWORDSHORT:{
+            inline confirm_password(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
+                        format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
+                        ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+                    }else{
+                        PlayerDialog(playerid, CONFIRM_PASSWORDSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Confirm Password", "And I was expecting that really... It's okay though.\nJust type it again and make sure to correct it this time.", "Submit");
+        }
     }
     return 1;
 }
@@ -764,6 +824,20 @@ doSpawnPlayer(playerid, type){
                 format(string, sizeof string, "%s_%s_%s", PlayerData[playerid][firstname], PlayerData[playerid][middlename], PlayerData[playerid][lastname]);
             SetPlayerName(playerid, string);
             BitFlag_On(PlayerFlag{ playerid }, LOGGED_IN_PLAYER);
+            HideTextDrawForPlayer(playerid, MAINMENUFORPLAYER);
+        }case REVIVE_PLAYER:{
+            if(BitFlag_Get(PlayerFlag{ playerid }, PLAYER_IS_DEAD)){
+
+            }else if(BitFlag_Get(PlayerFlag{ playerid }, PLAYER_IS_DYING)){
+                SpawnPlayer(playerid);
+                SetPlayerHealth(playerid, 1.0);
+                SetPlayerPos(playerid, PlayerData[playerid][x], PlayerData[playerid][y], PlayerData[playerid][z]);
+                SetPlayerFacingAngle(playerid, PlayerData[playerid][a]);
+                SetPlayerInterior(playerid, PlayerData[playerid][interiorid]);
+                SetPlayerVirtualWorld(playerid, PlayerData[playerid][virtualworld]);
+                TogglePlayerControllable(playerid, FALSE);
+                ApplyAnimation(playerid, "PED", "KO_shot_stom",4.1,0,1,1,1,1);
+            }
         }
     }
     return 1;
@@ -790,34 +864,426 @@ doGetLevel(playerid){
     return level;
 }
 
+Delay(playerid, type){
+    switch(type){
+        case DELAYED_KICK:{SetTimerEx("delayed_kick", 1000, false, "%d", playerid);}
+    }
+    return 1;
+}
+
+/*strreplace(string[], const search[], const replacement[], bool:ignorecase = false, pos = 0, limit = -1, maxlength = sizeof(string)) {
+    // No need to do anything if the limit is 0.
+    if (limit == 0)
+        return 0;
+    
+    new
+             sublen = strlen(search),
+             replen = strlen(replacement),
+        bool:packed = ispacked(string),
+             maxlen = maxlength,
+             len = strlen(string),
+             count = 0
+    ;
+    
+    
+    // "maxlen" holds the max string length (not to be confused with "maxlength", which holds the max. array size).
+    // Since packed strings hold 4 characters per array slot, we multiply "maxlen" by 4.
+    if (packed)
+        maxlen *= 4;
+    
+    // If the length of the substring is 0, we have nothing to look for..
+    if (!sublen)
+        return 0;
+    
+    // In this line we both assign the return value from "strfind" to "pos" then check if it's -1.
+    while (-1 != (pos = strfind(string, search, ignorecase, pos))) {
+        // Delete the string we found
+        strdel(string, pos, pos + sublen);
+        
+        len -= sublen;
+        
+        // If there's anything to put as replacement, insert it. Make sure there's enough room first.
+        if (replen && len + replen < maxlen) {
+            strins(string, replacement, pos, maxlength);
+            
+            pos += replen;
+            len += replen;
+        }
+        
+        // Is there a limit of number of replacements, if so, did we break it?
+        if (limit != -1 && ++count >= limit)
+            break;
+    }
+    
+    return count;
+}*/
+
+Textdraws(playerid, type, textdrawtype){
+    switch(type){
+        case GLOBAL_TEXTDRAWS:{
+            switch(textdrawtype){
+                case MAIN_MENU:{
+                    MainMenu[0] = TextDrawCreate(315.599731, 13.040017, "The_Four_Horsemen_Project");
+                    TextDrawLetterSize(MainMenu[0], 0.864000, 3.780265);
+                    TextDrawAlignment(MainMenu[0], 2);
+                    TextDrawColor(MainMenu[0], 255);
+                    TextDrawSetShadow(MainMenu[0], 0);
+                    TextDrawSetOutline(MainMenu[0], 1);
+                    TextDrawBackgroundColor(MainMenu[0], -1);
+                    TextDrawFont(MainMenu[0], 1);
+                    TextDrawSetProportional(MainMenu[0], 1);
+                    TextDrawSetShadow(MainMenu[0], 0);
+
+                    MainMenu[1] = TextDrawCreate(2.799945, 1.840006, "box");
+                    TextDrawLetterSize(MainMenu[1], 0.000000, 10.799998);
+                    TextDrawTextSize(MainMenu[1], 638.000000, 0.000000);
+                    TextDrawAlignment(MainMenu[1], 1);
+                    TextDrawColor(MainMenu[1], -1);
+                    TextDrawUseBox(MainMenu[1], 1);
+                    TextDrawBoxColor(MainMenu[1], 255);
+                    TextDrawSetShadow(MainMenu[1], 0);
+                    TextDrawSetOutline(MainMenu[1], 0);
+                    TextDrawBackgroundColor(MainMenu[1], 255);
+                    TextDrawFont(MainMenu[1], 1);
+                    TextDrawSetProportional(MainMenu[1], 1);
+                    TextDrawSetShadow(MainMenu[1], 0);
+
+                    MainMenu[2] = TextDrawCreate(297.199890, 54.853332, "Gamemode: Mixed~n~Version:0.0.1a");
+                    TextDrawLetterSize(MainMenu[2], 0.412799, 1.607466);
+                    TextDrawAlignment(MainMenu[2], 2);
+                    TextDrawColor(MainMenu[2], -1);
+                    TextDrawSetShadow(MainMenu[2], -1);
+                    TextDrawSetOutline(MainMenu[2], 0);
+                    TextDrawBackgroundColor(MainMenu[2], 255);
+                    TextDrawFont(MainMenu[2], 1);
+                    TextDrawSetProportional(MainMenu[2], 1);
+                    TextDrawSetShadow(MainMenu[2], -1);
+
+                    MainMenu[3] = TextDrawCreate(2.799979, 388.613464, "box");
+                    TextDrawLetterSize(MainMenu[3], 0.000000, 6.319998);
+                    TextDrawTextSize(MainMenu[3], 638.000000, 0.000000);
+                    TextDrawAlignment(MainMenu[3], 1);
+                    TextDrawColor(MainMenu[3], -1);
+                    TextDrawUseBox(MainMenu[3], 1);
+                    TextDrawBoxColor(MainMenu[3], 255);
+                    TextDrawSetShadow(MainMenu[3], 0);
+                    TextDrawSetOutline(MainMenu[3], 0);
+                    TextDrawBackgroundColor(MainMenu[3], 255);
+                    TextDrawFont(MainMenu[3], 1);
+                    TextDrawSetProportional(MainMenu[3], 1);
+                    TextDrawSetShadow(MainMenu[3], 0);
+
+                    MainMenu[4] = TextDrawCreate(298.000061, 408.773376, "Copyrights The Four Horsemen Project. All Rights Reserved.");
+                    TextDrawLetterSize(MainMenu[4], 0.400000, 1.600000);
+                    TextDrawAlignment(MainMenu[4], 2);
+                    TextDrawColor(MainMenu[4], -1);
+                    TextDrawSetShadow(MainMenu[4], 0);
+                    TextDrawSetOutline(MainMenu[4], 0);
+                    TextDrawBackgroundColor(MainMenu[4], 255);
+                    TextDrawFont(MainMenu[4], 1);
+                    TextDrawSetProportional(MainMenu[4], 1);
+                    TextDrawSetShadow(MainMenu[4], 0);
+                }
+            }
+        }
+        case PLAYER_TEXTDRAWS:{
+            switch(textdrawtype){
+                case AFTER_REGISTER:{
+                    AfterRegister[playerid][0] = CreatePlayerTextDraw(playerid, 25.999938, 129.520019, "box");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][0], 0.000000, 17.439998);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][0], 243.000000, 0.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][0], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][0], -1);
+                    PlayerTextDrawUseBox(playerid, AfterRegister[playerid][0], 1);
+                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][0], 170);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][0], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][0], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][0], 170);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][0], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][0], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][0], 0);
+
+                    AfterRegister[playerid][1] = CreatePlayerTextDraw(playerid, 86.800033, 129.519973, "Is this correct?");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][1], 0.400000, 1.600000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][1], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][1], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][1], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][1], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][1], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][1], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][1], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][1], 0);
+
+                    AfterRegister[playerid][2] = CreatePlayerTextDraw(playerid, 26.600011, 149.026580, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][2], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][2], 215.000000, -1.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][2], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][2], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][2], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][2], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][2], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][2], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][2], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][2], 0);
+
+                    AfterRegister[playerid][3] = CreatePlayerTextDraw(playerid, 27.600034, 152.666625, "Username: Joker29");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][3], 0.400000, 1.600000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][3], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][3], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][3], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][3], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][3], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][3], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][3], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][3], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][3], true);
+
+                    AfterRegister[playerid][4] = CreatePlayerTextDraw(playerid, 28.400035, 169.093276, "Password: Alterego29");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][4], 0.400000, 1.600000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][4], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][4], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][4], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][4], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][4], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][4], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][4], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][4], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][4], true);
+
+                    AfterRegister[playerid][5] = CreatePlayerTextDraw(playerid, 27.600030, 184.026702, "Email: laternoobs@gmail.com");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][5], 0.400000, 1.600000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][5], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][5], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][5], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][5], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][5], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][5], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][5], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][5], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][5], true);
+
+                    AfterRegister[playerid][6] = CreatePlayerTextDraw(playerid, 28.400030, 199.706756, "Birthdate: 04-22-1996");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][6], 0.400000, 1.600000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][6], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][6], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][6], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][6], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][6], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][6], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][6], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][6], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][6], true);
+
+                    AfterRegister[playerid][7] = CreatePlayerTextDraw(playerid, 28.400032, 214.640182, "Character Name: Earl Tacogdoy");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][7], 0.400000, 1.600000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][7], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][7], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][7], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][7], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][7], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][7], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][7], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][7], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][7], true);
+
+                    AfterRegister[playerid][8] = CreatePlayerTextDraw(playerid, 129.999969, 264.666687, "Confirm");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][8], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][8], 0.000000, 58.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][8], 2);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][8], -1);
+                    PlayerTextDrawUseBox(playerid, AfterRegister[playerid][8], 1);
+                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][8], 255);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][8], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][8], 1);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][8], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][8], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][8], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][8], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][8], true);
+
+                    AfterRegister[playerid][9] = CreatePlayerTextDraw(playerid, 96.200004, 261.773406, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][9], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][9], 1.000000, 20.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][9], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][9], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][9], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][9], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][9], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][9], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][9], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][9], 0);
+
+                    AfterRegister[playerid][10] = CreatePlayerTextDraw(playerid, 161.800033, 261.773406, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][10], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][10], 1.000000, 20.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][10], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][10], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][10], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][10], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][10], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][10], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][10], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][10], 0);
+
+                    AfterRegister[playerid][11] = CreatePlayerTextDraw(playerid, 96.999961, 261.773376, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][11], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][11], 66.000000, 1.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][11], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][11], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][11], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][11], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][11], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][11], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][11], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][11], 0);
+
+                    AfterRegister[playerid][12] = CreatePlayerTextDraw(playerid, 96.999954, 281.186767, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][12], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][12], 66.000000, 1.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][12], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][12], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][12], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][12], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][12], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][12], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][12], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][12], 0);
+
+                    AfterRegister[playerid][13] = CreatePlayerTextDraw(playerid, 21.799983, 125.133331, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][13], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][13], 1.000000, 164.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][13], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][13], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][13], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][13], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][13], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][13], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][13], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][13], 0);
+
+                    AfterRegister[playerid][14] = CreatePlayerTextDraw(playerid, 245.000091, 125.133331, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][14], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][14], 2.000000, 164.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][14], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][14], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][14], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][14], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][14], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][14], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][14], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][14], 0);
+
+                    AfterRegister[playerid][15] = CreatePlayerTextDraw(playerid, 21.799991, 126.626647, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][15], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][15], 223.000000, -1.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][15], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][15], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][15], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][15], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][15], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][15], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][15], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][15], 0);
+
+                    AfterRegister[playerid][16] = CreatePlayerTextDraw(playerid, 22.599992, 289.400115, "LD_SPAC:white");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][16], 0.000000, 0.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][16], 223.000000, -1.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][16], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][16], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][16], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][16], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][16], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][16], 4);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][16], 0);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][16], 0);
+                }
+            }
+        }
+    }
+}
+
+ShowTextDrawForPlayer(playerid, type){
+    switch(type){
+        case MAINMENUFORPLAYER:{
+            Textdraws(playerid, GLOBAL_TEXTDRAWS, MAIN_MENU);
+            for(new i = 0, j = 5; i < j; i++){
+                TextDrawShowForPlayer(playerid, MainMenu[i]);
+            }
+        }
+        case AFTERREGISTERFORPLAYER:{
+            Textdraws(playerid, GLOBAL_TEXTDRAWS, AFTER_REGISTER);
+            new string[12 + MAX_PASS];
+            format(string, sizeof string, "Username: %s", PlayerData[playerid][username]);
+            PlayerTextDrawSetString(playerid, AfterRegister[playerid][3], string);
+            format(string, sizeof string, "Password: %s", PlayerData[playerid][password]);
+            PlayerTextDrawSetString(playerid, AfterRegister[playerid][4], string);
+            format(string, sizeof string, "Email: %s", PlayerData[playerid][email]);
+            PlayerTextDrawSetString(playerid, AfterRegister[playerid][5], string);
+            format(string, sizeof string, "Birthdate: %d-%d-%d", PlayerData[playerid][birthmonth], PlayerData[playerid][birthdate], PlayerData[playerid][birthyear]);
+            PlayerTextDrawSetString(playerid, AfterRegister[playerid][6], string);
+            format(string, sizeof string, "Character Name: %s %s", PlayerData[playerid][email]);
+            PlayerTextDrawSetString(playerid, AfterRegister[playerid][7], string);
+            for(new i = 0, j = 17; i < j; i++){
+                PlayerTextDrawShow(playerid, AfterRegister[playerid][i]);
+            }
+            SelectTextDraw(playerid, 0xFFFFFF);
+        }
+    }
+    return 1;
+}
+
+HideTextDrawForPlayer(playerid, type){
+    switch(type){
+        case MAINMENUFORPLAYER:{
+            for(new i = 0, j = 5; i < j; i++){
+                TextDrawHideForPlayer(playerid, MainMenu[i]);
+            }
+        }
+        case AFTERREGISTERFORPLAYER:{
+            for(new i = 0, j = 17; i < j; i++){
+                PlayerTextDrawDestroy(playerid, AfterRegister[playerid][i]);
+            }
+        }
+    }
+    return 1;
+}
+
 main(){}
+
 
 public OnGameModeInit(){
     UsePlayerPedAnims(), EnableStuntBonusForAll(0), DisableInteriorEnterExits(),
     ShowPlayerMarkers(PLAYER_MARKERS_MODE_OFF), ManualVehicleEngineAndLights(),
     ShowNameTags(0);
-    database = db_open("database.db");
+    /*dc = DCC_FindChannelById("437216712971255809");
+    DCC_SendChannelMessage(dc, "Hey! The server just had just been started, come on in!");*/
     return 1;
 }
 
 public OnGameModeExit(){
+    //DCC_SendChannelMessage(dc, "Server just closed down. Will be opening soon.");
     foreach( new playerid : Player){
         OnPlayerDisconnect(playerid, 0);
     }
-    db_close(database);
     return 1;
 }
 
 public OnPlayerConnect(playerid){
-    SetSpawnInfo(playerid, NO_TEAM, 299, 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0);
+    SetSpawnInfo(playerid, NO_TEAM, 299, 0.0, 0.0, 1.0, 0.0, 0, 0, 0, 0, 0, 0);
     SpawnPlayer(playerid);
     TogglePlayerSpectating(playerid, TRUE);
     TogglePlayerControllable(playerid, FALSE);
+
+    ShowTextDrawForPlayer(playerid, MAINMENUFORPLAYER);
 
     TogglePlayerClock(playerid, TRUE);
 
     AccountQuery(playerid, EMPTY_DATA);
     GetPlayerName(playerid, PlayerData[playerid][username], MAX_USERNAME);
+    /*new string[43 + MAX_USERNAME];
+    format(string, sizeof string, "%s has joined the server. Care to join him?", PlayerData[playerid][username]);
+    DCC_SendChannelMessage(dc, string);*/
+    if(strfind(PlayerData[playerid][username], "_") != -1) return SCM(playerid, -1, "Your name contains the special character '_' underscore which is forbidden for this server."), Delay(playerid, DELAYED_KICK);
     if(fexist(UserAccFilePath(playerid))){
         AccountQuery(playerid, LOAD_CREDENTIALS);
         PlayerDialog(playerid, LOGIN);
@@ -829,11 +1295,10 @@ public OnPlayerConnect(playerid){
 
 public OnPlayerDisconnect(playerid, reason){
     if(BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)){
-        AccountQuery(playerid, SAVE_ACCOUNT);
-        AccountQuery(playerid, SAVE_DATA);
-        AccountQuery(playerid, SAVE_JOB);
-        AccountQuery(playerid, SAVE_WEAPON);
-        AccountQuery(playerid, SAVE_PENALTIES);
+        SaveAllPlayerFiles(playerid);
+        /*new string[36 + MAX_USERNAME];
+        format(string, sizeof string, "%s has left the server. Now I'm sad.");
+        DCC_SendChannelMessage(dc, string);*/
     }
     AccountQuery(playerid, EMPTY_DATA);
     return 1;
@@ -844,18 +1309,77 @@ public OnPlayerUpdate(playerid){
 }
 
 public OnPlayerDeath(playerid, killerid, reason){
-    PlayerData[playerid][deaths]++;
-    if(killerid != INVALID_PLAYER_ID){
-        if(reason >= 0 && reason <= 15) PlayerData[playerid][meleekill]++;
-        else if(reason >= 22 && reason <= 24) PlayerData[playerid][handgunkill]++;
-        else if(reason >= 25 && reason <= 27) PlayerData[playerid][shotgunkill]++;
-        else if(reason == 28 || reason == 29 || reason == 32) PlayerData[playerid][smgkill]++;
-        else if(reason >= 30 && reason <= 31 || reason == 34) PlayerData[playerid][riflekill]++;
-        else if(reason == 33) PlayerData[playerid][sniperkill]++;
-        else PlayerData[playerid][otherkill]++;
+    if(BitFlag_Get(PlayerFlag{ playerid }, PLAYER_IS_ONDM)){
+        PlayerData[playerid][deaths]++;
+        if(killerid != INVALID_PLAYER_ID){
+            if(reason >= 0 && reason <= 15) PlayerData[playerid][meleekill]++;
+            else if(reason >= 22 && reason <= 24) PlayerData[playerid][handgunkill]++;
+            else if(reason >= 25 && reason <= 27) PlayerData[playerid][shotgunkill]++;
+            else if(reason == 28 || reason == 29 || reason == 32) PlayerData[playerid][smgkill]++;
+            else if(reason >= 30 && reason <= 31 || reason == 34) PlayerData[playerid][riflekill]++;
+            else if(reason == 33) PlayerData[playerid][sniperkill]++;
+            else PlayerData[playerid][otherkill]++;
+        }
+    }else{
+        GetPlayerPos(playerid, PlayerData[playerid][x], PlayerData[playerid][y], PlayerData[playerid][z]);
+        GetPlayerFacingAngle(playerid, PlayerData[playerid][a]);
+        PlayerData[playerid][virtualworld] = GetPlayerVirtualWorld(playerid);
+        PlayerData[playerid][interiorid] = GetPlayerInterior(playerid);
+        BitFlag_On(PlayerFlag{ playerid }, PLAYER_IS_DYING);
+    }
+    doSpawnPlayer(playerid, REVIVE_PLAYER);
+    return 1;
+}
+
+/*public DCC_OnChannelMessage(DCC_Channel:channel, DCC_User:author, const message[]){
+    new channel_name[100 + 1];
+    if(!DCC_GetChannelName(channel, channel_name))
+        return 0;
+    new user_name[MAX_USERNAME];
+    if(!DCC_GetUserName(author, user_name))
+        return 0;
+    if(DCC_IsUserBot())
+    new string[131 - MAX_USERNAME];
+    format(string, sizeof string, "%s", message);
+    if(strfind(message, "m_") != -1){
+        #pragma unused channel_name
+        strreplace(string, "m_", "");
+        new name[7 + MAX_USERNAME];
+        format(name, sizeof name, "[DC]%s:", user_name);
+        strins(string, name, 0);
+        SCMTA(-1, string);
+    }
+    return 1;
+}*/
+
+public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid){
+    if(playertextid == AfterRegister[playerid][4]){
+        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+        PlayerDialog(playerid, CONFIRM_PASSWORD);
+    }
+    else if(playertextid == AfterRegister[playerid][5]){
+        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+        PlayerDialog(playerid, CONFIRM_EMAIL);
+    }
+    else if(playertextid == AfterRegister[playerid][6]){
+        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+        PlayerDialog(playerid, CONFIRM_BIRTHDATE);
+    }
+    else if(playertextid == AfterRegister[playerid][7]){
+        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+        PlayerDialog(playerid, CONFIRM_FIRSTNAME);
+    }
+    else if(playertextid == AfterRegister[playerid][8]){
+        SHA256_PassHash(PlayerData[playerid][password], PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
+        SaveAllPlayerFiles(playerid);
     }
     return 1;
 }
+
+// Custom callbacks
+forward delayed_kick(playerid);
+
+public delayed_kick(playerid) return Kick(playerid);
 
 task checktimer[250](){
     foreach( new playerid : Player ){
