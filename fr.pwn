@@ -1427,26 +1427,29 @@ public OnPlayerDeath(playerid, killerid, reason){
 }*/
 
 public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid){
-    if(playertextid == AfterRegister[playerid][4]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_PASSWORD);
-    }
-    else if(playertextid == AfterRegister[playerid][5]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_EMAIL);
-    }
-    else if(playertextid == AfterRegister[playerid][6]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_BIRTHDATE);
-    }
-    else if(playertextid == AfterRegister[playerid][7]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_FIRSTNAME);
-    }
-    else if(playertextid == AfterRegister[playerid][8]){
-        SHA256_PassHash(PlayerData[playerid][password], PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
-        SaveAllPlayerFiles(playerid);
-        doSpawnPlayer(playerid, SPAWN_PLAYER);
+    if(_:playertextid != INVALID_TEXT_DRAW){
+        if(playertextid == AfterRegister[playerid][4]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_PASSWORD);
+        }
+        else if(playertextid == AfterRegister[playerid][5]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_EMAIL);
+        }
+        else if(playertextid == AfterRegister[playerid][6]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_BIRTHDATE);
+        }
+        else if(playertextid == AfterRegister[playerid][7]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_FIRSTNAME);
+        }
+        else if(playertextid == AfterRegister[playerid][8]){
+            SHA256_PassHash(PlayerData[playerid][password], PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
+            SaveAllPlayerFiles(playerid);
+            doSpawnPlayer(playerid, SPAWN_PLAYER);
+        }
+        CancelSelectTextDraw(playerid);
     }
     return 1;
 }
