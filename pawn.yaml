@@ -4,28 +4,16 @@ dependencymeta:
   repo: freeroam
 entry: fr.pwn
 output: fr.amx
-version: 0.3.DL
 dependencies:
 - sampctl/samp-stdlib
 - pawn-lang/YSI-includes
 - Zeex/samp-plugin-crashdetect
 - Open-GTO/sa-mp-fixes
 - Southclaws/progress2
-- pBlueG/SA-MP-MySQL
 - maddinat0r/sscanf
 - maddinat0r/samp-discord-connector
-
+- JesterlJoker/easy-sqlite
+- JesterlJoker/easy-mysql
+- sampctl/mapfix
 runtime:
   mode: main
-contributor:
-- JesterlJoker
-indirect contributor:
-- Y_Less - YSI, Pawn Compiler, Fixes
-- Zeex - Pawn Compiler
-- maddinator - sscanf
-- oscar browman - sqlitei
-- pBlueG - MySQL
-- Southclaws - sampctl, progress2
-extra:
-  discord_bot_token: NDA4MTU2MTEwNDcwNzc0Nzg0.Dbnb2Q.5-WcBe-d-6lgtuA3p8yqMO9f6H0
-  useartwork: Yes
