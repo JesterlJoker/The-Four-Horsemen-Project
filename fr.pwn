@@ -6,6 +6,7 @@
 #define                                 SERIOUS_AI                          ("Jester")
 #define                                 DELUSIONAL_AI                       ("Joker")
 #define                                 OWNER                               ("Earl")
+#define                                 USE_SQLITE
 
 #include                                <a_samp>
 #define                                 FIXES_ServerVarMsg                  (0)
@@ -18,7 +19,11 @@
 #include                                <YSI\y_dialog>
 #include                                <YSI\y_timers>
 
-#include                                <easy-sqlite>
+#if defined USE_SQLITE
+    #include                                <easy-sqlite>
+#elseif defined USE_MYSQL
+    #include                                <easy-mysql>
+#endif
 #include                                <sscanf2>
 //#include                                <discord-connector>    
 
@@ -41,10 +46,10 @@ loadtext main[CHAT], main[DIALOGS];
 #define                                 MAX_EMAIL                           (65)
 #define                                 MAX_SLOT                            (13)
 #define                                 MAX_JOBS                            (2)
-#define                                 MAX_FIRSTNAME                       (8)
+#define                                 MAX_FIRSTNAME                       (7)
 #define                                 MAX_MIDDLENAME                      (2)
-#define                                 MAX_LASTNAME                        (8)
-#define                                 MAX_TAG                             (4)
+#define                                 MAX_LASTNAME                        (10)
+#define                                 MAX_TAG                             (5)
 
 enum pInfo{
     // Account Data
@@ -212,252 +217,288 @@ LoadAllPlayerData(playerid){
 AccountQuery(playerid, query){
     switch(query){
         case CREATE_DATA:{
-            SL::Begin(Database);
-            new handle = SL::Open(SL::INSERT, "Accounts", "", .database = Database);
-			SL::ToggleAutoIncrement(handle, true);
-            SL::WriteString(handle, "username", PlayerData[playerid][username]);
-            SL::WriteString(handle, "password", PlayerData[playerid][password]);
-            SL::WriteString(handle, "salt", PlayerData[playerid][salt]);
-            SL::WriteString(handle, "email", PlayerData[playerid][email]);
-            SL::WriteInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
-            SL::WriteInt(handle, "birthdate", PlayerData[playerid][birthdate]);
-            SL::WriteInt(handle, "birthyear", PlayerData[playerid][birthyear]);
-            SL::WriteInt(handle, "language", PlayerData[playerid][language]);
-            PlayerData[playerid][sqlid] = SL::Close(handle);
-            handle = SL::Open(SL::INSERT, "Data", .database = Database);
-            SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
-            SL::WriteString(handle, "firstname", PlayerData[playerid][firstname]);
-            SL::WriteString(handle, "middlename", PlayerData[playerid][middlename]);
-            SL::WriteString(handle, "lastname", PlayerData[playerid][lastname]);
-            SL::WriteFloat(handle, "health", PlayerData[playerid][health]);
-            SL::WriteFloat(handle, "armor", PlayerData[playerid][armor]);
-            SL::WriteInt(handle, "exp", PlayerData[playerid][exp]);
-            SL::WriteInt(handle, "meleekill", PlayerData[playerid][meleekill]);
-            SL::WriteInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
-            SL::WriteInt(handle, "smgkill", PlayerData[playerid][smgkill]);
-            SL::WriteInt(handle, "riflekill", PlayerData[playerid][riflekill]);
-            SL::WriteInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
-            SL::WriteInt(handle, "otherkill", PlayerData[playerid][otherkill]);
-            SL::WriteInt(handle, "deaths", PlayerData[playerid][deaths]);
-            SL::WriteInt(handle, "cash", PlayerData[playerid][cash]);
-            SL::WriteInt(handle, "coins", PlayerData[playerid][coins]);
-            SL::WriteFloat(handle, "x", PlayerData[playerid][x]);
-            SL::WriteFloat(handle, "y", PlayerData[playerid][y]);
-            SL::WriteFloat(handle, "z", PlayerData[playerid][z]);
-            SL::WriteFloat(handle, "a", PlayerData[playerid][a]);
-            SL::WriteInt(handle, "interiorid", PlayerData[playerid][interiorid]);
-            SL::WriteInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
-            SL::WriteInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
-            SL::WriteInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
-            SL::WriteInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
-            SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
-            SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
-            SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
-            SL::WriteString(handle, "referredby", PlayerData[playerid][referredby]);
-            SL::Close(handle);
-            handle = SL::Open(SL::INSERT, "Jobs", .database = Database);
-            SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
-            SL::WriteInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
-            SL::WriteInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
-            SL::WriteInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
-            SL::WriteInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
-            SL::WriteInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
-            SL::Close(handle);
-            handle = SL::Open(SL::INSERT, "Weapons", .database = Database);
-            new string[13];
-            for(new i = 0, j = MAX_SLOT; i < j; i++){
-                format(string, sizeof string, "weapons_%d", i);
-                SL::WriteInt(handle, string, PlayerData[playerid][weapons][i]);
-                format(string, sizeof string, "ammo_%d", i);
-                SL::WriteInt(handle, string, PlayerData[playerid][ammo][i]);
-            }
-            SL::WriteInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
-            SL::Close(handle);
-            handle = SL::Open(SL::INSERT, "Faults", .database = Database);
-            SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
-            SL::WriteInt(handle, "banned", (PlayerData[playerid][banned]) ? 1 : 0);
-            SL::WriteInt(handle, "banmonth", PlayerData[playerid][banmonth]);
-            SL::WriteInt(handle, "bandate", PlayerData[playerid][bandate]);
-            SL::WriteInt(handle, "banyear", PlayerData[playerid][banyear]);
-            SL::WriteInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
-            SL::WriteInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
-            SL::WriteInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
-            SL::WriteInt(handle, "totalbans", PlayerData[playerid][totalbans]);
-            SL::WriteInt(handle, "warnings", PlayerData[playerid][warnings]);
-            SL::WriteInt(handle, "kicks", PlayerData[playerid][kicks]);
-            SL::WriteInt(handle, "penalties", PlayerData[playerid][penalties]);
-            SL::Close(handle);
-            SL::Commit(Database);
+            #if defined USE_SQLITE
+                SL::Begin(Database);
+                new handle = SL::Open(SL::INSERT, "Accounts", "", .database = Database);
+                SL::ToggleAutoIncrement(handle, true);
+                SL::WriteString(handle, "username", PlayerData[playerid][username]);
+                SL::WriteString(handle, "password", PlayerData[playerid][password]);
+                SL::WriteString(handle, "salt", PlayerData[playerid][salt]);
+                SL::WriteString(handle, "email", PlayerData[playerid][email]);
+                SL::WriteInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
+                SL::WriteInt(handle, "birthdate", PlayerData[playerid][birthdate]);
+                SL::WriteInt(handle, "birthyear", PlayerData[playerid][birthyear]);
+                SL::WriteInt(handle, "language", PlayerData[playerid][language]);
+                PlayerData[playerid][sqlid] = SL::Close(handle);
+                handle = SL::Open(SL::INSERT, "Data", .database = Database);
+                SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+                SL::WriteString(handle, "firstname", PlayerData[playerid][firstname]);
+                SL::WriteString(handle, "middlename", PlayerData[playerid][middlename]);
+                SL::WriteString(handle, "lastname", PlayerData[playerid][lastname]);
+                SL::WriteFloat(handle, "health", PlayerData[playerid][health]);
+                SL::WriteFloat(handle, "armor", PlayerData[playerid][armor]);
+                SL::WriteInt(handle, "exp", PlayerData[playerid][exp]);
+                SL::WriteInt(handle, "meleekill", PlayerData[playerid][meleekill]);
+                SL::WriteInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
+                SL::WriteInt(handle, "smgkill", PlayerData[playerid][smgkill]);
+                SL::WriteInt(handle, "riflekill", PlayerData[playerid][riflekill]);
+                SL::WriteInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
+                SL::WriteInt(handle, "otherkill", PlayerData[playerid][otherkill]);
+                SL::WriteInt(handle, "deaths", PlayerData[playerid][deaths]);
+                SL::WriteInt(handle, "cash", PlayerData[playerid][cash]);
+                SL::WriteInt(handle, "coins", PlayerData[playerid][coins]);
+                SL::WriteFloat(handle, "x", PlayerData[playerid][x]);
+                SL::WriteFloat(handle, "y", PlayerData[playerid][y]);
+                SL::WriteFloat(handle, "z", PlayerData[playerid][z]);
+                SL::WriteFloat(handle, "a", PlayerData[playerid][a]);
+                SL::WriteInt(handle, "interiorid", PlayerData[playerid][interiorid]);
+                SL::WriteInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
+                SL::WriteInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
+                SL::WriteInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
+                SL::WriteInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
+                SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+                SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+                SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+                SL::WriteString(handle, "referredby", PlayerData[playerid][referredby]);
+                SL::Close(handle);
+                handle = SL::Open(SL::INSERT, "Jobs", .database = Database);
+                SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+                SL::WriteInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
+                SL::WriteInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
+                SL::WriteInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
+                SL::WriteInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
+                SL::WriteInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
+                SL::Close(handle);
+                handle = SL::Open(SL::INSERT, "Weapons", .database = Database);
+                new string[13];
+                for(new i = 0, j = MAX_SLOT; i < j; i++){
+                    format(string, sizeof string, "weapons_%d", i);
+                    SL::WriteInt(handle, string, PlayerData[playerid][weapons][i]);
+                    format(string, sizeof string, "ammo_%d", i);
+                    SL::WriteInt(handle, string, PlayerData[playerid][ammo][i]);
+                }
+                SL::WriteInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
+                SL::Close(handle);
+                handle = SL::Open(SL::INSERT, "Faults", .database = Database);
+                SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+                SL::WriteInt(handle, "banned", (PlayerData[playerid][banned]) ? 1 : 0);
+                SL::WriteInt(handle, "banmonth", PlayerData[playerid][banmonth]);
+                SL::WriteInt(handle, "bandate", PlayerData[playerid][bandate]);
+                SL::WriteInt(handle, "banyear", PlayerData[playerid][banyear]);
+                SL::WriteInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
+                SL::WriteInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
+                SL::WriteInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
+                SL::WriteInt(handle, "totalbans", PlayerData[playerid][totalbans]);
+                SL::WriteInt(handle, "warnings", PlayerData[playerid][warnings]);
+                SL::WriteInt(handle, "kicks", PlayerData[playerid][kicks]);
+                SL::WriteInt(handle, "penalties", PlayerData[playerid][penalties]);
+                SL::Close(handle);
+                SL::Commit(Database);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case SAVE_ACCOUNT:{
-            new handle = SL::Open(SL::UPDATE, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
-            SL::WriteString(handle, "username", PlayerData[playerid][username]);
-            SL::WriteString(handle, "password", PlayerData[playerid][password]);
-            SL::WriteString(handle, "salt", PlayerData[playerid][salt]);
-            SL::WriteString(handle, "email", PlayerData[playerid][email]);
-            SL::WriteInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
-            SL::WriteInt(handle, "birthdate", PlayerData[playerid][birthdate]);
-            SL::WriteInt(handle, "birthyear", PlayerData[playerid][birthyear]);
-            SL::WriteInt(handle, "language", PlayerData[playerid][language]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::UPDATE, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
+                SL::WriteString(handle, "username", PlayerData[playerid][username]);
+                SL::WriteString(handle, "password", PlayerData[playerid][password]);
+                SL::WriteString(handle, "salt", PlayerData[playerid][salt]);
+                SL::WriteString(handle, "email", PlayerData[playerid][email]);
+                SL::WriteInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
+                SL::WriteInt(handle, "birthdate", PlayerData[playerid][birthdate]);
+                SL::WriteInt(handle, "birthyear", PlayerData[playerid][birthyear]);
+                SL::WriteInt(handle, "language", PlayerData[playerid][language]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case SAVE_DATA:{
-            new handle = SL::Open(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
-            SL::WriteString(handle, "firstname", PlayerData[playerid][firstname]);
-            SL::WriteString(handle, "middlename", PlayerData[playerid][middlename]);
-            SL::WriteString(handle, "lastname", PlayerData[playerid][lastname]);
-            SL::WriteFloat(handle, "health", PlayerData[playerid][health]);
-            SL::WriteFloat(handle, "armor", PlayerData[playerid][armor]);
-            SL::WriteInt(handle, "exp", PlayerData[playerid][exp]);
-            SL::WriteInt(handle, "meleekill", PlayerData[playerid][meleekill]);
-            SL::WriteInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
-            SL::WriteInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
-            SL::WriteInt(handle, "smgkill", PlayerData[playerid][smgkill]);
-            SL::WriteInt(handle, "riflekill", PlayerData[playerid][riflekill]);
-            SL::WriteInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
-            SL::WriteInt(handle, "otherkill", PlayerData[playerid][otherkill]);
-            SL::WriteInt(handle, "deaths", PlayerData[playerid][deaths]);
-            SL::WriteInt(handle, "cash", PlayerData[playerid][cash]);
-            SL::WriteInt(handle, "coins", PlayerData[playerid][coins]);
-            SL::WriteFloat(handle, "x", PlayerData[playerid][x]);
-            SL::WriteFloat(handle, "y", PlayerData[playerid][y]);
-            SL::WriteFloat(handle, "z", PlayerData[playerid][z]);
-            SL::WriteFloat(handle, "a", PlayerData[playerid][a]);
-            SL::WriteInt(handle, "interiorid", PlayerData[playerid][interiorid]);
-            SL::WriteInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
-            SL::WriteInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
-            SL::WriteInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
-            SL::WriteInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
-            SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
-            SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
-            SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
-            SL::WriteString(handle, "referredby", PlayerData[playerid][referredby]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
+                SL::WriteString(handle, "firstname", PlayerData[playerid][firstname]);
+                SL::WriteString(handle, "middlename", PlayerData[playerid][middlename]);
+                SL::WriteString(handle, "lastname", PlayerData[playerid][lastname]);
+                SL::WriteFloat(handle, "health", PlayerData[playerid][health]);
+                SL::WriteFloat(handle, "armor", PlayerData[playerid][armor]);
+                SL::WriteInt(handle, "exp", PlayerData[playerid][exp]);
+                SL::WriteInt(handle, "meleekill", PlayerData[playerid][meleekill]);
+                SL::WriteInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
+                SL::WriteInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
+                SL::WriteInt(handle, "smgkill", PlayerData[playerid][smgkill]);
+                SL::WriteInt(handle, "riflekill", PlayerData[playerid][riflekill]);
+                SL::WriteInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
+                SL::WriteInt(handle, "otherkill", PlayerData[playerid][otherkill]);
+                SL::WriteInt(handle, "deaths", PlayerData[playerid][deaths]);
+                SL::WriteInt(handle, "cash", PlayerData[playerid][cash]);
+                SL::WriteInt(handle, "coins", PlayerData[playerid][coins]);
+                SL::WriteFloat(handle, "x", PlayerData[playerid][x]);
+                SL::WriteFloat(handle, "y", PlayerData[playerid][y]);
+                SL::WriteFloat(handle, "z", PlayerData[playerid][z]);
+                SL::WriteFloat(handle, "a", PlayerData[playerid][a]);
+                SL::WriteInt(handle, "interiorid", PlayerData[playerid][interiorid]);
+                SL::WriteInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
+                SL::WriteInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
+                SL::WriteInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
+                SL::WriteInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
+                SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+                SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+                SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+                SL::WriteString(handle, "referredby", PlayerData[playerid][referredby]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case SAVE_JOB:{
-            new handle = SL::Open(SL::UPDATE, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
-            SL::WriteInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
-            SL::WriteInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
-            SL::WriteInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
-            SL::WriteInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
-            SL::WriteInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::UPDATE, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
+                SL::WriteInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
+                SL::WriteInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
+                SL::WriteInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
+                SL::WriteInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
+                SL::WriteInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case SAVE_WEAPON:{
-            new handle = SL::Open(SL::UPDATE, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
-            new string[13];
-            for(new i = 0, j = MAX_SLOT; i < j; i++){
-                format(string, sizeof string, "weapons_%d", i);
-                SL::WriteInt(handle, string, PlayerData[playerid][weapons][i]);
-                format(string, sizeof string, "ammo_%d", i);
-                SL::WriteInt(handle, string, PlayerData[playerid][ammo][i]);
-            }
-            SL::WriteInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::UPDATE, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
+                new string[13];
+                for(new i = 0, j = MAX_SLOT; i < j; i++){
+                    format(string, sizeof string, "weapons_%d", i);
+                    SL::WriteInt(handle, string, PlayerData[playerid][weapons][i]);
+                    format(string, sizeof string, "ammo_%d", i);
+                    SL::WriteInt(handle, string, PlayerData[playerid][ammo][i]);
+                }
+                SL::WriteInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case SAVE_PENALTIES:{
-            new handle = SL::Open(SL::UPDATE, "Faults", "sqlid", PlayerData[playerid][sqlid]);
-            SL::WriteInt(handle, "banned", (PlayerData[playerid][banned]) ? 1 : 0);
-            SL::WriteInt(handle, "banmonth", PlayerData[playerid][banmonth]);
-            SL::WriteInt(handle, "bandate", PlayerData[playerid][bandate]);
-            SL::WriteInt(handle, "banyear", PlayerData[playerid][banyear]);
-            SL::WriteInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
-            SL::WriteInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
-            SL::WriteInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
-            SL::WriteInt(handle, "totalbans", PlayerData[playerid][totalbans]);
-            SL::WriteInt(handle, "warnings", PlayerData[playerid][warnings]);
-            SL::WriteInt(handle, "kicks", PlayerData[playerid][kicks]);
-            SL::WriteInt(handle, "penalties", PlayerData[playerid][penalties]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::Open(SL::UPDATE, "Faults", "sqlid", PlayerData[playerid][sqlid]);
+                SL::WriteInt(handle, "banned", (PlayerData[playerid][banned]) ? 1 : 0);
+                SL::WriteInt(handle, "banmonth", PlayerData[playerid][banmonth]);
+                SL::WriteInt(handle, "bandate", PlayerData[playerid][bandate]);
+                SL::WriteInt(handle, "banyear", PlayerData[playerid][banyear]);
+                SL::WriteInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
+                SL::WriteInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
+                SL::WriteInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
+                SL::WriteInt(handle, "totalbans", PlayerData[playerid][totalbans]);
+                SL::WriteInt(handle, "warnings", PlayerData[playerid][warnings]);
+                SL::WriteInt(handle, "kicks", PlayerData[playerid][kicks]);
+                SL::WriteInt(handle, "penalties", PlayerData[playerid][penalties]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case LOAD_CREDENTIALS:{
-            new handle = SL::Open(SL::READ, "Accounts", "username", PlayerData[playerid][username]);
-            SL::ReadInt(handle, "sqlid", PlayerData[playerid][sqlid]);
-            SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
-            SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::READ, "Accounts", "username", PlayerData[playerid][username]);
+                SL::ReadInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+                SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
+                SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case LOAD_ACCOUNT:{
-            new handle = SL::Open(SL::READ, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
-            SL::ReadString(handle, "username", PlayerData[playerid][username], MAX_USERNAME);
-            SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
-            SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
-            SL::ReadString(handle, "email", PlayerData[playerid][email], MAX_EMAIL);
-            SL::ReadInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
-            SL::ReadInt(handle, "birthdate", PlayerData[playerid][birthdate]);
-            SL::ReadInt(handle, "birthyear", PlayerData[playerid][birthyear]);
-            SL::ReadString(handle, "language", PlayerData[playerid][referredby], 3);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::READ, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
+                SL::ReadString(handle, "username", PlayerData[playerid][username], MAX_USERNAME);
+                SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
+                SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
+                SL::ReadString(handle, "email", PlayerData[playerid][email], MAX_EMAIL);
+                SL::ReadInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
+                SL::ReadInt(handle, "birthdate", PlayerData[playerid][birthdate]);
+                SL::ReadInt(handle, "birthyear", PlayerData[playerid][birthyear]);
+                SL::ReadString(handle, "language", PlayerData[playerid][referredby], 3);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case LOAD_DATA:{
-            new handle = SL::Open(SL::READ, "Data", "sqlid", PlayerData[playerid][sqlid]);
-            SL::ReadString(handle, "firstname", PlayerData[playerid][firstname], MAX_FIRSTNAME);
-            SL::ReadString(handle, "middlename", PlayerData[playerid][middlename], MAX_MIDDLENAME);
-            SL::ReadString(handle, "lastname", PlayerData[playerid][lastname], MAX_LASTNAME);
-            SL::ReadFloat(handle, "health", PlayerData[playerid][health]);
-            SL::ReadFloat(handle, "armor", PlayerData[playerid][armor]);
-            SL::ReadInt(handle, "exp", PlayerData[playerid][exp]);
-            SL::ReadInt(handle, "meleekill", PlayerData[playerid][meleekill]);
-            SL::ReadInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
-            SL::ReadInt(handle, "smgkill", PlayerData[playerid][smgkill]);
-            SL::ReadInt(handle, "riflekill", PlayerData[playerid][riflekill]);
-            SL::ReadInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
-            SL::ReadInt(handle, "otherkill", PlayerData[playerid][otherkill]);
-            SL::ReadInt(handle, "deaths", PlayerData[playerid][deaths]);
-            SL::ReadInt(handle, "cash", PlayerData[playerid][cash]);
-            SL::ReadInt(handle, "coins", PlayerData[playerid][coins]);
-            SL::ReadFloat(handle, "x", PlayerData[playerid][x]);
-            SL::ReadFloat(handle, "y", PlayerData[playerid][y]);
-            SL::ReadFloat(handle, "z", PlayerData[playerid][z]);
-            SL::ReadFloat(handle, "a", PlayerData[playerid][a]);
-            SL::ReadInt(handle, "interiorid", PlayerData[playerid][interiorid]);
-            SL::ReadInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
-            SL::ReadInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
-            SL::ReadInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
-            SL::ReadInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
-            SL::ReadInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
-            SL::ReadInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
-            SL::ReadInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
-            SL::ReadString(handle, "referredby", PlayerData[playerid][referredby], MAX_USERNAME);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::READ, "Data", "sqlid", PlayerData[playerid][sqlid]);
+                SL::ReadString(handle, "firstname", PlayerData[playerid][firstname], MAX_FIRSTNAME);
+                SL::ReadString(handle, "middlename", PlayerData[playerid][middlename], MAX_MIDDLENAME);
+                SL::ReadString(handle, "lastname", PlayerData[playerid][lastname], MAX_LASTNAME);
+                SL::ReadFloat(handle, "health", PlayerData[playerid][health]);
+                SL::ReadFloat(handle, "armor", PlayerData[playerid][armor]);
+                SL::ReadInt(handle, "exp", PlayerData[playerid][exp]);
+                SL::ReadInt(handle, "meleekill", PlayerData[playerid][meleekill]);
+                SL::ReadInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
+                SL::ReadInt(handle, "smgkill", PlayerData[playerid][smgkill]);
+                SL::ReadInt(handle, "riflekill", PlayerData[playerid][riflekill]);
+                SL::ReadInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
+                SL::ReadInt(handle, "otherkill", PlayerData[playerid][otherkill]);
+                SL::ReadInt(handle, "deaths", PlayerData[playerid][deaths]);
+                SL::ReadInt(handle, "cash", PlayerData[playerid][cash]);
+                SL::ReadInt(handle, "coins", PlayerData[playerid][coins]);
+                SL::ReadFloat(handle, "x", PlayerData[playerid][x]);
+                SL::ReadFloat(handle, "y", PlayerData[playerid][y]);
+                SL::ReadFloat(handle, "z", PlayerData[playerid][z]);
+                SL::ReadFloat(handle, "a", PlayerData[playerid][a]);
+                SL::ReadInt(handle, "interiorid", PlayerData[playerid][interiorid]);
+                SL::ReadInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
+                SL::ReadInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
+                SL::ReadInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
+                SL::ReadInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
+                SL::ReadInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+                SL::ReadInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+                SL::ReadInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+                SL::ReadString(handle, "referredby", PlayerData[playerid][referredby], MAX_USERNAME);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case LOAD_JOB:{
-            new handle = SL::Open(SL::READ, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
-            SL::ReadInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
-            SL::ReadInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
-            SL::ReadInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
-            SL::ReadInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
-            SL::ReadInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::READ, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
+                SL::ReadInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
+                SL::ReadInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
+                SL::ReadInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
+                SL::ReadInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
+                SL::ReadInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case LOAD_WEAPONS:{
-            new handle = SL::Open(SL::READ, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
-            new string[13];
-            for(new i = 0, j = MAX_SLOT; i < j; i++){
-                format(string, sizeof string, "weapons_%d", i);
-                SL::ReadInt(handle, string, PlayerData[playerid][weapons][i]);
-                format(string, sizeof string, "ammo_%d", i);
-                SL::ReadInt(handle, string, PlayerData[playerid][ammo][i]);
-            }
-            SL::ReadInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::READ, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
+                new string[13];
+                for(new i = 0, j = MAX_SLOT; i < j; i++){
+                    format(string, sizeof string, "weapons_%d", i);
+                    SL::ReadInt(handle, string, PlayerData[playerid][weapons][i]);
+                    format(string, sizeof string, "ammo_%d", i);
+                    SL::ReadInt(handle, string, PlayerData[playerid][ammo][i]);
+                }
+                SL::ReadInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case LOAD_PENALTIES:{
-            new handle = SL::Open(SL::READ, "Faults", "sqlid", PlayerData[playerid][sqlid]),
-            banint;
-            SL::ReadInt(handle, "banned", banint);
-            PlayerData[playerid][banned] = (banint) ? TRUE : FALSE;
-            SL::ReadInt(handle, "banmonth", PlayerData[playerid][banmonth]);
-            SL::ReadInt(handle, "bandate", PlayerData[playerid][bandate]);
-            SL::ReadInt(handle, "banyear", PlayerData[playerid][banyear]);
-            SL::ReadInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
-            SL::ReadInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
-            SL::ReadInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
-            SL::ReadInt(handle, "totalbBans", PlayerData[playerid][totalbans]);
-            SL::ReadInt(handle, "warnings", PlayerData[playerid][warnings]);
-            SL::ReadInt(handle, "kicks", PlayerData[playerid][kicks]);
-            SL::ReadInt(handle, "penalties", PlayerData[playerid][penalties]);
-            SL::Close(handle);
+            #if defined USE_SQLITE
+                new handle = SL::OpenEx(SL::READ, "Faults", "sqlid", PlayerData[playerid][sqlid]),
+                banint;
+                SL::ReadInt(handle, "banned", banint);
+                PlayerData[playerid][banned] = (banint) ? TRUE : FALSE;
+                SL::ReadInt(handle, "banmonth", PlayerData[playerid][banmonth]);
+                SL::ReadInt(handle, "bandate", PlayerData[playerid][bandate]);
+                SL::ReadInt(handle, "banyear", PlayerData[playerid][banyear]);
+                SL::ReadInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
+                SL::ReadInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
+                SL::ReadInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
+                SL::ReadInt(handle, "totalbBans", PlayerData[playerid][totalbans]);
+                SL::ReadInt(handle, "warnings", PlayerData[playerid][warnings]);
+                SL::ReadInt(handle, "kicks", PlayerData[playerid][kicks]);
+                SL::ReadInt(handle, "penalties", PlayerData[playerid][penalties]);
+                SL::Close(handle);
+            #elseif defined USE_MYSQL
+            #endif
         }
         case EMPTY_DATA:{
             // Emptying Account Data
@@ -586,21 +627,14 @@ PlayerDialog(playerid, dialog){
             Text_ListBox(playerid, using inline register_birthdate, $BIRTHDATE_REGTITLE, $BIRTHDATE_REGLIST, $SUBMIT_BTN, $BLANK_BTN, string);
         }
         case BIRTHYEAR:{
-            new year, mo, da, altyear, string[7*44];
-            getdate(year, mo, da);
-            altyear = year - 50;
-            for(new i = 0, j = 44; i < j; i++){
-                if(isnull(string)) format(string, sizeof string, "%d", altyear);
-                else format(string, sizeof string, "%s\n%d", string, altyear+i);
-            }
             inline register_birthyear(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, inputtext
                 if(response){
-                    PlayerData[playerid][birthyear] = altyear+listitem;
+                    PlayerData[playerid][birthyear] = 1968 + listitem;
                     PlayerDialog(playerid, EMAIL);
                 }
             }
-            Text_ListBox(playerid, using inline register_birthyear, $BIRTHYEAR_REGTITLE, $BIRTHYEAR_REGLIST, $SUBMIT_BTN, $BLANK_BTN, string);
+            Text_ListBox(playerid, using inline register_birthyear, $BIRTHYEAR_REGTITLE, $BIRTHYEAR_REGLIST, $SUBMIT_BTN, $BLANK_BTN);
         }
         case EMAIL:{
             inline register_email(pid, dialogid, response, listitem, string:inputtext[]){
@@ -750,9 +784,15 @@ PlayerDialog(playerid, dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     new hash[MAX_PASS];
-                    SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_SALT);
-                    if(strcmp(PlayerData[playerid][password], hash) == 0){
+                    SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_PASS);
+                    printf("%s | %s | %s", PlayerData[playerid][password], PlayerData[playerid][salt], hash);
+                    if(strcmp(PlayerData[playerid][password], hash, TRUE) == 0){
                         getdate(PlayerData[playerid][yearloggedin], PlayerData[playerid][monthloggedin], PlayerData[playerid][dateloggedin]);
+                        new handle = SL::Open(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
+                        SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+                        SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+                        SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+                        SL::Close(handle);
                         LoadAllPlayerData(playerid);
                         doSpawnPlayer(playerid, SPAWN_PLAYER);
                     }else{
@@ -767,8 +807,14 @@ PlayerDialog(playerid, dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     new hash[MAX_PASS];
-                    SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_SALT);
-                    if(strcmp(PlayerData[playerid][password], hash) == 0){
+                    SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_PASS);
+                    if(strcmp(PlayerData[playerid][password], hash, TRUE) == 0){
+                        getdate(PlayerData[playerid][yearloggedin], PlayerData[playerid][monthloggedin], PlayerData[playerid][dateloggedin]);
+                        new handle = SL::Open(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
+                        SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+                        SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+                        SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+                        SL::Close(handle);
                         LoadAllPlayerData(playerid);
                         doSpawnPlayer(playerid, SPAWN_PLAYER);
                     }else{
@@ -1000,6 +1046,7 @@ PlayerDialog(playerid, dialog){
 doSpawnPlayer(playerid, type){
     switch(type){
         case SPAWN_PLAYER:{
+            Langs_SetPlayerCode(playerid, PlayerData[playerid][language]);
             for(new i = 0, j = MAX_SLOT; i < j; i++){
                 GivePlayerWeapon(playerid, PlayerData[playerid][weapons][i], PlayerData[playerid][ammo][i]);
             }
@@ -1429,7 +1476,7 @@ ShowTextDrawForPlayer(playerid, type){
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][5], string);
             format(string, sizeof string, "Birthdate: %d-%d-%d", PlayerData[playerid][birthmonth], PlayerData[playerid][birthdate], PlayerData[playerid][birthyear]);
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][6], string);
-            format(string, sizeof string, "Character Name: %s %s", PlayerData[playerid][email]);
+            format(string, sizeof string, "Character Name: %s %s", PlayerData[playerid][firstname], PlayerData[playerid][lastname]);
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][7], string);
             format(string, sizeof string, "Referredby: %s", PlayerData[playerid][referredby]);
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][17], string);
@@ -1526,11 +1573,13 @@ CreateDatabase(){
             format(string, sizeof string, "ammo_%d", i);
             SL::AddTableEntry(handle, string, SL_TYPE_INT);
         }
+        SL::AddTableEntry(handle, "armedweapon", SL_TYPE_INT);
         SL::Close(handle);
     }
     if(!SL::ExistsTable("Faults")){
         new handle = SL::Open(SL::CREATE, "Faults", "", .database = Database);
         SL::AddTableEntry(handle, "sqlid", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "banned", SL_TYPE_INT);
         SL::AddTableEntry(handle, "banmonth", SL_TYPE_INT);
         SL::AddTableEntry(handle, "bandate", SL_TYPE_INT);
         SL::AddTableEntry(handle, "banyear", SL_TYPE_INT);
