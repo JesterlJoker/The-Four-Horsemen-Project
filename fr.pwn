@@ -1,7 +1,7 @@
-#define                                 SERVER_NAME                         ("The Four Horsemen")
+#define                                 SERVER_NAME                         ("The Four Horsemen Project")
 #define                                 MAJOR_VERSION                       (0)
-#define                                 MINOR_VERSION                       (0)
-#define                                 PATCH_VERSION                       (1)
+#define                                 MINOR_VERSION                       (1)
+#define                                 PATCH_VERSION                       (0)
 #define                                 STATE_VERSION                       ("a")
 #define                                 SERIOUS_AI                          ("Jester")
 #define                                 DELUSIONAL_AI                       ("Joker")
@@ -10,15 +10,19 @@
 #include                                <a_samp>
 #define                                 FIXES_ServerVarMsg                  (0)
 #include                                <fixes>
+#include                                <mapfix>
 
-#include                                <YSI\y_dialog>
-#include                                <YSI\y_ini>
-#include                                <YSI\y_inline>
 #include                                <YSI\y_iterate>
+#include                                <YSI\y_inline>
+#include                                <YSI\y_text>
+#include                                <YSI\y_dialog>
 #include                                <YSI\y_timers>
 
+#include                                <easy-sqlite>
 #include                                <sscanf2>
-//#include                                <discord-connector>
+//#include                                <discord-connector>    
+
+loadtext main[CHAT], main[DIALOGS];
 
 #define                                 BitFlag_Get(%0,%1)                  ((%0) & (%1))   // Returns zero (false) if the flag isn't set.
 #define                                 BitFlag_On(%0,%1)                   ((%0) |= (%1))  // Turn on a flag.
@@ -32,7 +36,7 @@
 
 #define                                 MAX_USERNAME                        (MAX_PLAYER_NAME + 1)
 #define                                 MAX_PASS                            (65)
-#define                                 MAX_SALT                            (16)
+#define                                 MAX_SALT                            (17)
 //#define                                 MAX_DATE                          (18)
 #define                                 MAX_EMAIL                           (65)
 #define                                 MAX_SLOT                            (13)
@@ -44,6 +48,7 @@
 
 enum pInfo{
     // Account Data
+    sqlid,
     username[MAX_USERNAME],
     email[MAX_EMAIL],
     password[MAX_PASS],
@@ -51,17 +56,13 @@ enum pInfo{
     birthmonth,
     birthdate,
     birthyear,
-    monthregistered,
-    dateregistered,
-    yearregistered,
-    monthloggedin,
-    dateloggedin,
-    yearloggedin,
+    language[3],
 
     // Player Data
     firstname[MAX_FIRSTNAME],
     middlename[MAX_MIDDLENAME],
     lastname[MAX_LASTNAME],
+    fullname[MAX_USERNAME],
     Float: health,
     Float: armor,
     exp,
@@ -75,13 +76,19 @@ enum pInfo{
     deaths,
     cash,
     coins,
-    referredby[MAX_USERNAME],
     Float: x,
     Float: y,
     Float: z,
     Float: a,
     interiorid,
     virtualworld,
+    monthregistered,
+    dateregistered,
+    yearregistered,
+    monthloggedin,
+    dateloggedin,
+    yearloggedin,
+    referredby[MAX_USERNAME],
 
     // Jobs
     jobs[MAX_JOBS],
@@ -119,7 +126,7 @@ enum PlayerFlags:(<<= 1) {
 
 enum {
     // Database, Query and everything related to data enums
-    SAVE_ACCOUNT, SAVE_DATA, SAVE_JOB, SAVE_WEAPON,
+    CREATE_DATA, SAVE_ACCOUNT, SAVE_DATA, SAVE_JOB, SAVE_WEAPON,
     SAVE_PENALTIES, LOAD_CREDENTIALS, LOAD_ACCOUNT, LOAD_DATA, 
     LOAD_JOB, LOAD_WEAPONS, LOAD_PENALTIES, EMPTY_DATA,
 
@@ -149,9 +156,10 @@ new
     PlayerData[MAX_PLAYERS][pInfo],
     PlayerFlags: PlayerFlag[MAX_PLAYERS char],
     //DCC_Channel: dc
+    DB: Database,
 
     Text:MainMenu[5],
-    PlayerText:AfterRegister[MAX_PLAYERS][17]
+    PlayerText:AfterRegister[MAX_PLAYERS][18]
     ;
 
 /*SetVehicleParam(vehicleid, type){
@@ -180,37 +188,7 @@ Float: GetPlayerArmor(playerid){
     return arm;
 }
 
-UserAccFilePath(playerid){
-    new name[27 + MAX_USERNAME];
-    format(name, sizeof name, "PlayerFiles/Accounts/%s.ini", PlayerData[playerid][username]);
-    return name;
-}
-
-UserDataFilePath(playerid){
-    new name[23 + MAX_USERNAME];
-    format(name, sizeof name, "PlayerFiles/Data/%s.ini", PlayerData[playerid][username]);
-    return name;
-}
-
-UserJobFilePath(playerid){
-    new name[23 + MAX_USERNAME];
-    format(name, sizeof name, "PlayerFiles/Jobs/%s.ini", PlayerData[playerid][username]);
-    return name;
-}
-
-UserWeaponFilePath(playerid){
-    new name[23 + MAX_USERNAME];
-    format(name, sizeof name, "PlayerFiles/Weapons/%s.ini", PlayerData[playerid][username]);
-    return name;
-}
-
-UserFaultFilePath(playerid){
-    new name[23 + MAX_USERNAME];
-    format(name, sizeof name, "PlayerFiles/Faults/%s.ini", PlayerData[playerid][username]);
-    return name;
-}
-
-SaveAllPlayerFiles(playerid){
+SaveAllPlayerData(playerid){
     PlayerData[playerid][virtualworld] = GetPlayerVirtualWorld(playerid),
     PlayerData[playerid][interiorid] = GetPlayerInterior(playerid),
     GetPlayerPos(playerid, PlayerData[playerid][x], PlayerData[playerid][y], PlayerData[playerid][z]),
@@ -224,7 +202,7 @@ SaveAllPlayerFiles(playerid){
     AccountQuery(playerid, SAVE_PENALTIES); return 1;
 }
 
-LoadAllPlayerFiles(playerid){
+LoadAllPlayerData(playerid){
     AccountQuery(playerid, LOAD_ACCOUNT), AccountQuery(playerid, LOAD_DATA),
     AccountQuery(playerid, LOAD_JOB), AccountQuery(playerid, LOAD_WEAPONS),
     AccountQuery(playerid, LOAD_PENALTIES);
@@ -233,205 +211,265 @@ LoadAllPlayerFiles(playerid){
 
 AccountQuery(playerid, query){
     switch(query){
+        case CREATE_DATA:{
+            SL::Begin(Database);
+            new handle = SL::Open(SL::INSERT, "Accounts", "", .database = Database);
+			SL::ToggleAutoIncrement(handle, true);
+            SL::WriteString(handle, "username", PlayerData[playerid][username]);
+            SL::WriteString(handle, "password", PlayerData[playerid][password]);
+            SL::WriteString(handle, "salt", PlayerData[playerid][salt]);
+            SL::WriteString(handle, "email", PlayerData[playerid][email]);
+            SL::WriteInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
+            SL::WriteInt(handle, "birthdate", PlayerData[playerid][birthdate]);
+            SL::WriteInt(handle, "birthyear", PlayerData[playerid][birthyear]);
+            SL::WriteInt(handle, "language", PlayerData[playerid][language]);
+            PlayerData[playerid][sqlid] = SL::Close(handle);
+            handle = SL::Open(SL::INSERT, "Data", .database = Database);
+            SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+            SL::WriteString(handle, "firstname", PlayerData[playerid][firstname]);
+            SL::WriteString(handle, "middlename", PlayerData[playerid][middlename]);
+            SL::WriteString(handle, "lastname", PlayerData[playerid][lastname]);
+            SL::WriteFloat(handle, "health", PlayerData[playerid][health]);
+            SL::WriteFloat(handle, "armor", PlayerData[playerid][armor]);
+            SL::WriteInt(handle, "exp", PlayerData[playerid][exp]);
+            SL::WriteInt(handle, "meleekill", PlayerData[playerid][meleekill]);
+            SL::WriteInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
+            SL::WriteInt(handle, "smgkill", PlayerData[playerid][smgkill]);
+            SL::WriteInt(handle, "riflekill", PlayerData[playerid][riflekill]);
+            SL::WriteInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
+            SL::WriteInt(handle, "otherkill", PlayerData[playerid][otherkill]);
+            SL::WriteInt(handle, "deaths", PlayerData[playerid][deaths]);
+            SL::WriteInt(handle, "cash", PlayerData[playerid][cash]);
+            SL::WriteInt(handle, "coins", PlayerData[playerid][coins]);
+            SL::WriteFloat(handle, "x", PlayerData[playerid][x]);
+            SL::WriteFloat(handle, "y", PlayerData[playerid][y]);
+            SL::WriteFloat(handle, "z", PlayerData[playerid][z]);
+            SL::WriteFloat(handle, "a", PlayerData[playerid][a]);
+            SL::WriteInt(handle, "interiorid", PlayerData[playerid][interiorid]);
+            SL::WriteInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
+            SL::WriteInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
+            SL::WriteInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
+            SL::WriteInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
+            SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+            SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+            SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+            SL::WriteString(handle, "referredby", PlayerData[playerid][referredby]);
+            SL::Close(handle);
+            handle = SL::Open(SL::INSERT, "Jobs", .database = Database);
+            SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+            SL::WriteInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
+            SL::WriteInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
+            SL::WriteInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
+            SL::WriteInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
+            SL::WriteInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
+            SL::Close(handle);
+            handle = SL::Open(SL::INSERT, "Weapons", .database = Database);
+            new string[13];
+            for(new i = 0, j = MAX_SLOT; i < j; i++){
+                format(string, sizeof string, "weapons_%d", i);
+                SL::WriteInt(handle, string, PlayerData[playerid][weapons][i]);
+                format(string, sizeof string, "ammo_%d", i);
+                SL::WriteInt(handle, string, PlayerData[playerid][ammo][i]);
+            }
+            SL::WriteInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
+            SL::Close(handle);
+            handle = SL::Open(SL::INSERT, "Faults", .database = Database);
+            SL::WriteInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+            SL::WriteInt(handle, "banned", (PlayerData[playerid][banned]) ? 1 : 0);
+            SL::WriteInt(handle, "banmonth", PlayerData[playerid][banmonth]);
+            SL::WriteInt(handle, "bandate", PlayerData[playerid][bandate]);
+            SL::WriteInt(handle, "banyear", PlayerData[playerid][banyear]);
+            SL::WriteInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
+            SL::WriteInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
+            SL::WriteInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
+            SL::WriteInt(handle, "totalbans", PlayerData[playerid][totalbans]);
+            SL::WriteInt(handle, "warnings", PlayerData[playerid][warnings]);
+            SL::WriteInt(handle, "kicks", PlayerData[playerid][kicks]);
+            SL::WriteInt(handle, "penalties", PlayerData[playerid][penalties]);
+            SL::Close(handle);
+            SL::Commit(Database);
+        }
         case SAVE_ACCOUNT:{
-            new INI: File = INI_Open(UserAccFilePath(playerid));
-
-            INI_SetTag(File, "Account");
-            INI_WriteInt(File, "yearloggedin", PlayerData[playerid][yearloggedin]);
-            INI_WriteInt(File, "dateloggedin", PlayerData[playerid][dateloggedin]);
-            INI_WriteInt(File, "monthloggedin", PlayerData[playerid][monthloggedin]);
-            INI_WriteInt(File, "yearregistered", PlayerData[playerid][yearregistered]);
-            INI_WriteInt(File, "dateregistered", PlayerData[playerid][dateregistered]);
-            INI_WriteInt(File, "monthregistered", PlayerData[playerid][monthregistered]);
-            INI_WriteInt(File, "birthyear", PlayerData[playerid][birthyear]);
-            INI_WriteInt(File, "birthdate", PlayerData[playerid][birthdate]);
-            INI_WriteInt(File, "birthmonth", PlayerData[playerid][birthmonth]);
-            INI_WriteString(File, "email", PlayerData[playerid][email]);
-            INI_WriteString(File, "salt", PlayerData[playerid][salt]);
-            INI_WriteString(File, "password", PlayerData[playerid][password]);
-
-            INI_Close(File);
+            new handle = SL::Open(SL::UPDATE, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
+            SL::WriteString(handle, "username", PlayerData[playerid][username]);
+            SL::WriteString(handle, "password", PlayerData[playerid][password]);
+            SL::WriteString(handle, "salt", PlayerData[playerid][salt]);
+            SL::WriteString(handle, "email", PlayerData[playerid][email]);
+            SL::WriteInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
+            SL::WriteInt(handle, "birthdate", PlayerData[playerid][birthdate]);
+            SL::WriteInt(handle, "birthyear", PlayerData[playerid][birthyear]);
+            SL::WriteInt(handle, "language", PlayerData[playerid][language]);
+            SL::Close(handle);
         }
         case SAVE_DATA:{
-            new INI: File = INI_Open(UserDataFilePath(playerid));
-            
-            INI_SetTag(File, "Data");
-            INI_WriteInt(File, "virtualworld", PlayerData[playerid][virtualworld]);
-            INI_WriteInt(File, "interiorid", PlayerData[playerid][interiorid]);
-            INI_WriteFloat(File, "a", PlayerData[playerid][a]);
-            INI_WriteFloat(File, "z", PlayerData[playerid][z]);
-            INI_WriteFloat(File, "y", PlayerData[playerid][y]);
-            INI_WriteFloat(File, "x", PlayerData[playerid][x]);
-            INI_WriteString(File, "referredby", PlayerData[playerid][referredby]);
-            INI_WriteInt(File, "coins", PlayerData[playerid][coins]);
-            INI_WriteInt(File, "cash", PlayerData[playerid][cash]);
-            INI_WriteInt(File, "deaths", PlayerData[playerid][deaths]);
-            INI_WriteInt(File, "otherkill", PlayerData[playerid][otherkill]);
-            INI_WriteInt(File, "sniperkill", PlayerData[playerid][sniperkill]);
-            INI_WriteInt(File, "riflekill", PlayerData[playerid][riflekill]);
-            INI_WriteInt(File, "smgkill", PlayerData[playerid][smgkill]);
-            INI_WriteInt(File, "shotgunkill", PlayerData[playerid][shotgunkill]);
-            INI_WriteInt(File, "handgunkill", PlayerData[playerid][handgunkill]);
-            INI_WriteInt(File, "meleekill", PlayerData[playerid][meleekill]);
-            INI_WriteInt(File, "exp", PlayerData[playerid][exp]);
-            INI_WriteFloat(File, "armor", PlayerData[playerid][armor]);
-            INI_WriteFloat(File, "health", PlayerData[playerid][health]);
-            INI_WriteString(File, "lastname", PlayerData[playerid][lastname]);
-            INI_WriteString(File, "middlename", PlayerData[playerid][middlename]);
-            INI_WriteString(File, "firstname", PlayerData[playerid][firstname]);
-
-            INI_Close(File);
+            new handle = SL::Open(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
+            SL::WriteString(handle, "firstname", PlayerData[playerid][firstname]);
+            SL::WriteString(handle, "middlename", PlayerData[playerid][middlename]);
+            SL::WriteString(handle, "lastname", PlayerData[playerid][lastname]);
+            SL::WriteFloat(handle, "health", PlayerData[playerid][health]);
+            SL::WriteFloat(handle, "armor", PlayerData[playerid][armor]);
+            SL::WriteInt(handle, "exp", PlayerData[playerid][exp]);
+            SL::WriteInt(handle, "meleekill", PlayerData[playerid][meleekill]);
+            SL::WriteInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
+            SL::WriteInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
+            SL::WriteInt(handle, "smgkill", PlayerData[playerid][smgkill]);
+            SL::WriteInt(handle, "riflekill", PlayerData[playerid][riflekill]);
+            SL::WriteInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
+            SL::WriteInt(handle, "otherkill", PlayerData[playerid][otherkill]);
+            SL::WriteInt(handle, "deaths", PlayerData[playerid][deaths]);
+            SL::WriteInt(handle, "cash", PlayerData[playerid][cash]);
+            SL::WriteInt(handle, "coins", PlayerData[playerid][coins]);
+            SL::WriteFloat(handle, "x", PlayerData[playerid][x]);
+            SL::WriteFloat(handle, "y", PlayerData[playerid][y]);
+            SL::WriteFloat(handle, "z", PlayerData[playerid][z]);
+            SL::WriteFloat(handle, "a", PlayerData[playerid][a]);
+            SL::WriteInt(handle, "interiorid", PlayerData[playerid][interiorid]);
+            SL::WriteInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
+            SL::WriteInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
+            SL::WriteInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
+            SL::WriteInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
+            SL::WriteInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+            SL::WriteInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+            SL::WriteInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+            SL::WriteString(handle, "referredby", PlayerData[playerid][referredby]);
+            SL::Close(handle);
         }
         case SAVE_JOB:{
-            new INI:File = INI_Open(UserJobFilePath(playerid));
-
-            INI_SetTag(File, "Jobs");
-            INI_WriteInt(File, "deliveryskill", PlayerData[playerid][deliveryskill]);
-            INI_WriteInt(File, "smithingskill", PlayerData[playerid][smithingskill]);
-            INI_WriteInt(File, "craftingskill", PlayerData[playerid][craftingskill]);
-            INI_WriteInt(File, "jobs_1", PlayerData[playerid][jobs][1]);
-            INI_WriteInt(File, "jobs_0", PlayerData[playerid][jobs][0]);
-            
-            INI_Close(File);
+            new handle = SL::Open(SL::UPDATE, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
+            SL::WriteInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
+            SL::WriteInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
+            SL::WriteInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
+            SL::WriteInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
+            SL::WriteInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
+            SL::Close(handle);
         }
         case SAVE_WEAPON:{
-            new INI:File = INI_Open(UserWeaponFilePath(playerid));
-
-            INI_SetTag(File, "Weapons");
-            INI_WriteInt(File, "armedweapon", PlayerData[playerid][armedweapon]);
-            for(new i = MAX_SLOT-1, j = 0; i > j; i--){
-                new string[11+2];
-                format(string, sizeof string, "ammo_%d", i);
-                INI_WriteInt(File, string, PlayerData[playerid][ammo][i]);
+            new handle = SL::Open(SL::UPDATE, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
+            new string[13];
+            for(new i = 0, j = MAX_SLOT; i < j; i++){
                 format(string, sizeof string, "weapons_%d", i);
-                INI_WriteInt(File, string, PlayerData[playerid][weapons][i]);
+                SL::WriteInt(handle, string, PlayerData[playerid][weapons][i]);
+                format(string, sizeof string, "ammo_%d", i);
+                SL::WriteInt(handle, string, PlayerData[playerid][ammo][i]);
             }
-
-            INI_Close(File);
+            SL::WriteInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
+            SL::Close(handle);
         }
         case SAVE_PENALTIES:{
-            new INI:File = INI_Open(UserFaultFilePath(playerid));
-
-            INI_SetTag(File, "Penalties");
-            INI_WriteInt(File, "penalties", PlayerData[playerid][penalties]);
-            INI_WriteInt(File, "kicks", PlayerData[playerid][kicks]);
-            INI_WriteInt(File, "warnings", PlayerData[playerid][warnings]);
-            INI_WriteInt(File, "totalbans", PlayerData[playerid][totalbans]);
-            INI_WriteInt(File, "banupliftyear", PlayerData[playerid][banupliftyear]);
-            INI_WriteInt(File, "banupliftdate", PlayerData[playerid][banupliftdate]);
-            INI_WriteInt(File, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
-            INI_WriteInt(File, "banyear", PlayerData[playerid][banyear]);
-            INI_WriteInt(File, "bandate", PlayerData[playerid][bandate]);
-            INI_WriteInt(File, "banmonth", PlayerData[playerid][banmonth]);
-            INI_WriteBool(File, "banned", PlayerData[playerid][banned]);
-
-            INI_Close(File);
+            new handle = SL::Open(SL::UPDATE, "Faults", "sqlid", PlayerData[playerid][sqlid]);
+            SL::WriteInt(handle, "banned", (PlayerData[playerid][banned]) ? 1 : 0);
+            SL::WriteInt(handle, "banmonth", PlayerData[playerid][banmonth]);
+            SL::WriteInt(handle, "bandate", PlayerData[playerid][bandate]);
+            SL::WriteInt(handle, "banyear", PlayerData[playerid][banyear]);
+            SL::WriteInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
+            SL::WriteInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
+            SL::WriteInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
+            SL::WriteInt(handle, "totalbans", PlayerData[playerid][totalbans]);
+            SL::WriteInt(handle, "warnings", PlayerData[playerid][warnings]);
+            SL::WriteInt(handle, "kicks", PlayerData[playerid][kicks]);
+            SL::WriteInt(handle, "penalties", PlayerData[playerid][penalties]);
+            SL::Close(handle);
         }
         case LOAD_CREDENTIALS:{
-            inline Load_Account(string:name[], string:value[]){
-                print("[JOKER SYSTEM] Checking Credential Inline");
-                INI_String("password", PlayerData[playerid][password]);
-                INI_String("salt", PlayerData[playerid][salt]);
-            }
-            INI_ParseFile(UserAccFilePath(playerid), using inline "Load_Account");
+            new handle = SL::Open(SL::READ, "Accounts", "username", PlayerData[playerid][username]);
+            SL::ReadInt(handle, "sqlid", PlayerData[playerid][sqlid]);
+            SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
+            SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
+            SL::Close(handle);
         }
         case LOAD_ACCOUNT:{
-            inline Load_Account(string:name[], string:value[]){
-                INI_String("password", PlayerData[playerid][password]);
-                INI_String("salt", PlayerData[playerid][salt]);
-                INI_String("email", PlayerData[playerid][email]);
-                INI_Int("birthmonth", PlayerData[playerid][birthmonth]);
-                INI_Int("birthdate", PlayerData[playerid][birthdate]);
-                INI_Int("birthyear", PlayerData[playerid][birthyear]);
-                INI_Int("monthregistered", PlayerData[playerid][monthregistered]);
-                INI_Int("dateregistered", PlayerData[playerid][dateregistered]);
-                INI_Int("yearregistered", PlayerData[playerid][yearregistered]);
-                INI_Int("monthloggedin", PlayerData[playerid][monthloggedin]);
-                INI_Int("dateloggedin", PlayerData[playerid][dateloggedin]);
-                INI_Int("yearloggedin", PlayerData[playerid][yearloggedin]);
-            }
-            INI_ParseFile(UserAccFilePath(playerid), using inline "Load_Account");
+            new handle = SL::Open(SL::READ, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
+            SL::ReadString(handle, "username", PlayerData[playerid][username], MAX_USERNAME);
+            SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
+            SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
+            SL::ReadString(handle, "email", PlayerData[playerid][email], MAX_EMAIL);
+            SL::ReadInt(handle, "birthmonth", PlayerData[playerid][birthmonth]);
+            SL::ReadInt(handle, "birthdate", PlayerData[playerid][birthdate]);
+            SL::ReadInt(handle, "birthyear", PlayerData[playerid][birthyear]);
+            SL::ReadString(handle, "language", PlayerData[playerid][referredby], 3);
+            SL::Close(handle);
         }
         case LOAD_DATA:{
-            inline Load_Data(string:name[], string:value[]){
-                INI_String("firstname", PlayerData[playerid][firstname]);
-                INI_String("middlename", PlayerData[playerid][middlename]);
-                INI_String("lastname", PlayerData[playerid][lastname]);
-                INI_Float("health", PlayerData[playerid][health]);
-                INI_Float("armor", PlayerData[playerid][armor]);
-                INI_Int("exp", PlayerData[playerid][exp]);
-                INI_Int("meleekill", PlayerData[playerid][meleekill]);
-                INI_Int("handgunkill", PlayerData[playerid][handgunkill]);
-                INI_Int("shotgunkill", PlayerData[playerid][shotgunkill]);
-                INI_Int("smgkill", PlayerData[playerid][smgkill]);
-                INI_Int("riflekill", PlayerData[playerid][riflekill]);
-                INI_Int("sniperkill", PlayerData[playerid][sniperkill]);
-                INI_Int("otherkill", PlayerData[playerid][otherkill]);
-                INI_Int("deaths", PlayerData[playerid][deaths]);
-                INI_Int("cash", PlayerData[playerid][cash]);
-                INI_Int("coins", PlayerData[playerid][coins]);
-                INI_String("referredby", PlayerData[playerid][referredby]);
-                INI_Float("x", PlayerData[playerid][x]);
-                INI_Float("y", PlayerData[playerid][y]);
-                INI_Float("z", PlayerData[playerid][z]);
-                INI_Float("a", PlayerData[playerid][a]);
-                INI_Int("interiorid", PlayerData[playerid][interiorid]);
-                INI_Int("virtualworld", PlayerData[playerid][virtualworld]);
-            }
-            INI_ParseFile(UserAccFilePath(playerid), using inline "Load_Data");
+            new handle = SL::Open(SL::READ, "Data", "sqlid", PlayerData[playerid][sqlid]);
+            SL::ReadString(handle, "firstname", PlayerData[playerid][firstname], MAX_FIRSTNAME);
+            SL::ReadString(handle, "middlename", PlayerData[playerid][middlename], MAX_MIDDLENAME);
+            SL::ReadString(handle, "lastname", PlayerData[playerid][lastname], MAX_LASTNAME);
+            SL::ReadFloat(handle, "health", PlayerData[playerid][health]);
+            SL::ReadFloat(handle, "armor", PlayerData[playerid][armor]);
+            SL::ReadInt(handle, "exp", PlayerData[playerid][exp]);
+            SL::ReadInt(handle, "meleekill", PlayerData[playerid][meleekill]);
+            SL::ReadInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
+            SL::ReadInt(handle, "smgkill", PlayerData[playerid][smgkill]);
+            SL::ReadInt(handle, "riflekill", PlayerData[playerid][riflekill]);
+            SL::ReadInt(handle, "sniperkill", PlayerData[playerid][sniperkill]);
+            SL::ReadInt(handle, "otherkill", PlayerData[playerid][otherkill]);
+            SL::ReadInt(handle, "deaths", PlayerData[playerid][deaths]);
+            SL::ReadInt(handle, "cash", PlayerData[playerid][cash]);
+            SL::ReadInt(handle, "coins", PlayerData[playerid][coins]);
+            SL::ReadFloat(handle, "x", PlayerData[playerid][x]);
+            SL::ReadFloat(handle, "y", PlayerData[playerid][y]);
+            SL::ReadFloat(handle, "z", PlayerData[playerid][z]);
+            SL::ReadFloat(handle, "a", PlayerData[playerid][a]);
+            SL::ReadInt(handle, "interiorid", PlayerData[playerid][interiorid]);
+            SL::ReadInt(handle, "virtualworld", PlayerData[playerid][virtualworld]);
+            SL::ReadInt(handle, "monthregistered", PlayerData[playerid][monthregistered]);
+            SL::ReadInt(handle, "dateregistered", PlayerData[playerid][dateregistered]);
+            SL::ReadInt(handle, "yearregistered", PlayerData[playerid][yearregistered]);
+            SL::ReadInt(handle, "monthloggedin", PlayerData[playerid][monthloggedin]);
+            SL::ReadInt(handle, "dateloggedin", PlayerData[playerid][dateloggedin]);
+            SL::ReadInt(handle, "yearloggedin", PlayerData[playerid][yearloggedin]);
+            SL::ReadString(handle, "referredby", PlayerData[playerid][referredby], MAX_USERNAME);
+            SL::Close(handle);
         }
         case LOAD_JOB:{
-            inline Load_Job(string:name[], string:value[]){
-                INI_Int("jobs_0", PlayerData[playerid][jobs][0]);
-                INI_Int("jobs_1", PlayerData[playerid][jobs][1]);
-                INI_Int("craftingskill", PlayerData[playerid][craftingskill]);
-                INI_Int("smithingskill", PlayerData[playerid][smithingskill]);
-                INI_Int("deliveryskill", PlayerData[playerid][deliveryskill]);
-            }
-            INI_ParseFile(UserJobFilePath(playerid), using inline "Load_Job");
+            new handle = SL::Open(SL::READ, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
+            SL::ReadInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
+            SL::ReadInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
+            SL::ReadInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
+            SL::ReadInt(handle, "smithingskill", PlayerData[playerid][smithingskill]);
+            SL::ReadInt(handle, "deliveryskill", PlayerData[playerid][deliveryskill]);
+            SL::Close(handle);
         }
         case LOAD_WEAPONS:{
-            inline Load_Weapons(string:name[], string:value[]){
-                for(new i = 0, j = MAX_SLOT; i < j; i++){
-                    new string[11 + 2];
-                    format(string, sizeof string, "weapons_%d", i);
-                    INI_Int(string, PlayerData[playerid][weapons][i]);
-                    format(string, sizeof string, "ammo_%d", i);
-                    INI_Int(string, PlayerData[playerid][ammo][i]);
-                }
-                INI_Int("armedweapon", PlayerData[playerid][armedweapon]);
+            new handle = SL::Open(SL::READ, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
+            new string[13];
+            for(new i = 0, j = MAX_SLOT; i < j; i++){
+                format(string, sizeof string, "weapons_%d", i);
+                SL::ReadInt(handle, string, PlayerData[playerid][weapons][i]);
+                format(string, sizeof string, "ammo_%d", i);
+                SL::ReadInt(handle, string, PlayerData[playerid][ammo][i]);
             }
-            INI_ParseFile(UserWeaponFilePath(playerid), using inline "Load_Weapons");
+            SL::ReadInt(handle, "armedweapon", PlayerData[playerid][armedweapon]);
+            SL::Close(handle);
         }
         case LOAD_PENALTIES:{
-            inline Load_Penalties(string:name[], string:value[]){
-                INI_Bool("banned", PlayerData[playerid][banned]);
-                INI_Int("banmonth", PlayerData[playerid][banmonth]);
-                INI_Int("bandate", PlayerData[playerid][bandate]);
-                INI_Int("banyear", PlayerData[playerid][banyear]);
-                INI_Int("banupliftmonth", PlayerData[playerid][banupliftmonth]);
-                INI_Int("banupliftdate", PlayerData[playerid][banupliftdate]);
-                INI_Int("banupliftyear", PlayerData[playerid][banupliftyear]);
-                INI_Int("totalbans", PlayerData[playerid][totalbans]);
-                INI_Int("warnings", PlayerData[playerid][warnings]);
-                INI_Int("kicks", PlayerData[playerid][kicks]);
-                INI_Int("penalties", PlayerData[playerid][penalties]);
-            }
-            INI_ParseFile(UserFaultFilePath(playerid), using inline "Load_Penalties");
+            new handle = SL::Open(SL::READ, "Faults", "sqlid", PlayerData[playerid][sqlid]),
+            banint;
+            SL::ReadInt(handle, "banned", banint);
+            PlayerData[playerid][banned] = (banint) ? TRUE : FALSE;
+            SL::ReadInt(handle, "banmonth", PlayerData[playerid][banmonth]);
+            SL::ReadInt(handle, "bandate", PlayerData[playerid][bandate]);
+            SL::ReadInt(handle, "banyear", PlayerData[playerid][banyear]);
+            SL::ReadInt(handle, "banupliftmonth", PlayerData[playerid][banupliftmonth]);
+            SL::ReadInt(handle, "banupliftdate", PlayerData[playerid][banupliftdate]);
+            SL::ReadInt(handle, "banupliftyear", PlayerData[playerid][banupliftyear]);
+            SL::ReadInt(handle, "totalbBans", PlayerData[playerid][totalbans]);
+            SL::ReadInt(handle, "warnings", PlayerData[playerid][warnings]);
+            SL::ReadInt(handle, "kicks", PlayerData[playerid][kicks]);
+            SL::ReadInt(handle, "penalties", PlayerData[playerid][penalties]);
+            SL::Close(handle);
         }
         case EMPTY_DATA:{
             // Emptying Account Data
-            format(PlayerData[playerid][username], MAX_USERNAME, ""),
-            format(PlayerData[playerid][password], MAX_PASS, ""),
-            format(PlayerData[playerid][email], MAX_EMAIL, ""),
-            format(PlayerData[playerid][salt], MAX_SALT, "");
+            PlayerData[playerid][username] = PlayerData[playerid][password] = PlayerData[playerid][salt] =
+            PlayerData[playerid][email] = PlayerData[playerid][language] = EOS;
             PlayerData[playerid][birthmonth] = PlayerData[playerid][birthdate] = PlayerData[playerid][birthyear] = 
             PlayerData[playerid][monthregistered] = PlayerData[playerid][dateregistered] = PlayerData[playerid][yearregistered] =
             PlayerData[playerid][monthloggedin] = PlayerData[playerid][dateloggedin] = PlayerData[playerid][yearloggedin] = 0;
 
             //Emptying Character Data
-            format(PlayerData[playerid][firstname], MAX_FIRSTNAME, ""), format(PlayerData[playerid][middlename], MAX_MIDDLENAME, ""),
-            format(PlayerData[playerid][lastname], MAX_LASTNAME, "");
+            PlayerData[playerid][firstname] = PlayerData[playerid][middlename] = PlayerData[playerid][lastname] =
+            PlayerData[playerid][referredby] = EOS;
             PlayerData[playerid][health] = 100.0; PlayerData[playerid][armor] = 0.00;
             PlayerData[playerid][exp] = 1;
             PlayerData[playerid][meleekill] = PlayerData[playerid][handgunkill] = PlayerData[playerid][shotgunkill] = 
@@ -439,7 +477,6 @@ AccountQuery(playerid, query){
             PlayerData[playerid][otherkill] = PlayerData[playerid][deaths] = 
             PlayerData[playerid][coins] = 0;
             PlayerData[playerid][cash] = 100;
-            format(PlayerData[playerid][referredby], MAX_USERNAME, "");
             PlayerData[playerid][x] = PlayerData[playerid][y] = PlayerData[playerid][z] = PlayerData[playerid][a] = 0.0;
             PlayerData[playerid][interiorid] = PlayerData[playerid][virtualworld] = 0;
 
@@ -459,11 +496,18 @@ AccountQuery(playerid, query){
             PlayerData[playerid][banupliftmonth] = PlayerData[playerid][banupliftdate] = PlayerData[playerid][banupliftyear] = -1;
             PlayerData[playerid][totalbans] = PlayerData[playerid][warnings] = PlayerData[playerid][kicks] =
             PlayerData[playerid][penalties] = 0;
-
-            // Reset All Flags for player
-            PlayerFlag{ playerid } = PlayerFlags:0;
         }
     }
+    return 1;
+}
+
+doSalt(playerid){
+    for(new i = 0, j = MAX_SALT; i < j; i++)
+    {
+        // storing random character in every slot of our salt array
+        PlayerData[playerid][salt][i] = random(79) + 47;
+    }
+    PlayerData[playerid][salt][MAX_SALT-1] = 0;
     return 1;
 }
 
@@ -474,11 +518,7 @@ PlayerDialog(playerid, dialog){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
-                        for(new i = 0, j = MAX_SALT; i < j; i++)
-                        {
-                            // storing random character in every slot of our salt array
-                            PlayerData[playerid][salt][i] = random(79) + 47;
-                        }
+                        doSalt(playerid);
                         format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
                         PlayerDialog(playerid, BIRTHMONTH);
                     }else{
@@ -486,20 +526,15 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            new string[149 + 6];
-            format(string, sizeof string, "{FFFFFF}Hi noob! I'm {FF0000}%s{FFFFFF}! and I'm here to lead you through the registration!\nCome now type your password below so we can get started.", DELUSIONAL_AI);
-            Dialog_ShowCallback(playerid, using inline register_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Register", string, "Submit");
+            Text_PasswordBox(playerid, using inline register_password, $PASSWORD_REGTITLE, $PASSWORD_REGTEXT, $SUBMIT_BTN, $BLANK_BTN, DELUSIONAL_AI);
+            
         }
         case REGISTER_TOO_SHORT:{
             inline register_short_password(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     if(strlen(inputtext) >= 6 && strlen(inputtext) <= 13){
-                        for(new i = 0, j = MAX_SALT; i < j; i++)
-                        {
-                            // storing random character in every slot of our salt array
-                            PlayerData[playerid][salt][i] = random(79) + 47;
-                        }
+                        doSalt(playerid);
                         format(PlayerData[playerid][password], MAX_PASS, "%s", inputtext);
                         PlayerDialog(playerid, BIRTHMONTH);
                     }else{
@@ -507,7 +542,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_short_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Register", "{FFFFFF}Aww! Snap! You typed in an invalid password.\nPlease do remember, for your safety pff!\nPlease do remember that for your safety our server needs you to type in a minimum of 6 characters\nand a maximum of 12 characters if you are feeling generous.", "Submit");
+            Text_PasswordBox(playerid, using inline register_short_password, $PASSWORD_REGTITLE, $PASSWORD_REGERRORTEXT, $SUBMIT_BTN, $BLANK_BTN);
         }
         case BIRTHMONTH:{
             inline register_birthmonth(pid, dialogid, response, listitem, string:inputtext[]){
@@ -517,19 +552,7 @@ PlayerDialog(playerid, dialog){
                     PlayerDialog(playerid, BIRTHDATE);
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_birthmonth, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthmonth", 
-            "January\n\
-            February\n\
-            March\n\
-            April\n\
-            May\n\
-            June\n\
-            July\n\
-            August\n\
-            September\n\
-            October\n\
-            November\n\
-            December", "Submit");
+            Text_ListBox(playerid, using inline register_birthmonth, $BIRTHMONTH_REGTITLE, $BIRTHMONTH_REGLIST, $SUBMIT_BTN, $BLANK_BTN);
         }
         case BIRTHDATE:{
             new string[4*31];
@@ -560,7 +583,7 @@ PlayerDialog(playerid, dialog){
                     PlayerDialog(playerid, BIRTHYEAR);
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_birthdate, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthdate", string, "Submit");
+            Text_ListBox(playerid, using inline register_birthdate, $BIRTHDATE_REGTITLE, $BIRTHDATE_REGLIST, $SUBMIT_BTN, $BLANK_BTN, string);
         }
         case BIRTHYEAR:{
             new year, mo, da, altyear, string[7*44];
@@ -577,7 +600,7 @@ PlayerDialog(playerid, dialog){
                     PlayerDialog(playerid, EMAIL);
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_birthyear, DIALOG_STYLE_LIST, "The Four Horsemen Project - Birthyear", string, "Submit");
+            Text_ListBox(playerid, using inline register_birthyear, $BIRTHYEAR_REGTITLE, $BIRTHYEAR_REGLIST, $SUBMIT_BTN, $BLANK_BTN, string);
         }
         case EMAIL:{
             inline register_email(pid, dialogid, response, listitem, string:inputtext[]){
@@ -596,7 +619,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_email, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "{FFFFFF}I'm back! I hate those types of dialogs. I can't speak through their list. Oh well!\nType in a valid email that must contain an @ and some periods to be valid.", "Submit");
+            Text_InputBox(playerid, using inline register_email, $EMAIL_REGTITLE, $EMAIL_REGTEXT, $SUBMIT_BTN, $BLANK_BTN);
         }
         case EMAIL_INVALID:{
             inline register_email_invalid(pid, dialogid, response, listitem, string:inputtext[]){
@@ -615,7 +638,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_email_invalid, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "{FFFFFF}Gosh danggit! You typed an invalid email.\nYou must remember to add the @ and some periods to it i.e joker@tfhm.org", "Submit");
+            Text_InputBox(playerid, using inline register_email_invalid, $EMAIL_REGTITLE, $EMAIL_REGTEXTINVALID, $SUBMIT_BTN, $BLANK_BTN);
         }
         case EMAIL_TOO_SHORT:{
             inline register_email_short(pid, dialogid, response, listitem, string:inputtext[]){
@@ -634,7 +657,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_email_short, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Email", "{FFFFFF}Ha! You got short there bud!\nEmails should not be shorter than 15 characters if you know what I mean.\nNote: Hi this is JJ speaking. If for some reason your email is shorter than 14 characters please do message us.", "Submit");
+            Text_InputBox(playerid, using inline register_email_short, $EMAIL_REGTITLE, $EMAIL_REGTEXTSHORT, $SUBMIT_BTN, $BLANK_BTN);
         }
         case REFERREDBY:{
             inline register_referral(pid, dialogid, response, listitem, string:inputtext[]){
@@ -648,7 +671,7 @@ PlayerDialog(playerid, dialog){
                     }else{PlayerDialog(playerid, REFERREDBY_DN_EXIST);}
                 }else{PlayerDialog(playerid, FIRSTNAME);}
             }
-            Dialog_ShowCallback(playerid, using inline register_referral, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", "{FFFFFF}Now if you are feeling generous type in the person who invited  you into our server!\nOh boy both of you will get rewards for this.\nAhh yes! You should also remember that username's are very case-sensitive. \nOne miscapitalized letter or untyped character might give the reward to the wrong person.", "Submit", "Skip");
+            Text_InputBox(playerid, using inline register_referral, $REFERREDBY_REGTITLE, $REFERREDBY_REGTEXT, $SUBMIT_BTN, $SKIP_BTN);
         }
         case REFERREDBY_DN_EXIST:{
             inline register_refferal_dne(pid, dialogid, response, listitem, string:inputtext[]){
@@ -662,9 +685,7 @@ PlayerDialog(playerid, dialog){
                     }else{PlayerDialog(playerid, REFERREDBY_DN_EXIST);}
                 }else{PlayerDialog(playerid, FIRSTNAME);}
             }
-            new string[223 + 7];
-            format(string, sizeof string, "{FFFFFF}Oh! I see. {00FF00}%s {FFFFFF}just told me, my super serious brother, that we have not found the person you are looking for, unfortunately.\nIf you have just mistyped it then feel free to retype the name below and this time, correctly.", SERIOUS_AI);
-            Dialog_ShowCallback(playerid, using inline register_refferal_dne, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Referreby", string, "Submit", "Skip");
+            Text_InputBox(playerid, using inline register_refferal_dne, $REFERREDBY_REGTEXT, $REFERREDBY_REGNOTEXT, $SUBMIT_BTN, $SKIP_BTN);
         }
         case FIRSTNAME:{
             inline register_firstname(pid, dialogid, response, listitem, string:inputtext[]){
@@ -678,9 +699,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            new string[168 + 6 + 7 + 5];
-            format(string, sizeof string, "{FFFFFF}Oh! You've come to far to quit do ya?\nNow let's get to know you, since I introduced myself earlier. Remember that names starting with %s, %s, %s is forbidden.", SERIOUS_AI, DELUSIONAL_AI, OWNER);
-            Dialog_ShowCallback(playerid, using inline register_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", string, "Submit");
+            Text_InputBox(playerid, using inline register_firstname, $FIRSTNAME_REGTITLE, $FIRSTNAME_REGTEXT, $SUBMIT_BTN, $BLANK_BTN, OWNER, SERIOUS_AI, DELUSIONAL_AI);
         }
         case INVALID_FIRSTNAME:{
             inline register_invalid_firstname(pid, dialogid, response, listitem, string:inputtext[]){
@@ -694,9 +713,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            new string[251 + 11];
-            format(string, sizeof string, "{FFFFFF}Ah! Hehehe my bad. Your Firstname should be not longer than %d characters and shorter than 4 characters\nNote: Hi it's me again. Capitalizing the name is not a must since the system would save the first letter of the name to be capitalized", MAX_LASTNAME);
-            Dialog_ShowCallback(playerid, using inline register_invalid_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", string, "Submit");
+            Text_InputBox(playerid, using inline register_invalid_firstname, $FIRSTNAME_REGTITLE, $FIRSTNAME_REGSHORT, $SUBMIT_BTN, $BLANK_BTN, MAX_LASTNAME);
         }
         case LASTNAME:{
             inline register_lastname(pid, dialogid, response, listitem, string:inputtext[]){
@@ -711,10 +728,7 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            new string[495 + 6 + 6];
-            format(string, sizeof string, "{FFFFFF}And finally your lastname\nNote: Sorry for interrupting %s so much but I need to tell you something.\nThis server have firstname_middlename_lastname format in which noobs, like you will only have firstname_lastname\n\
-            The middlename is intended after marriage, if you are a female, or if you get adopted by a family.\nNote {FF0000}%s{FFFFFF}: Although boss would like it if you buy a middlename from him.\nMiddlename's will be the first letter only but you need to type in a literal middlename", DELUSIONAL_AI, DELUSIONAL_AI);
-            Dialog_ShowCallback(playerid, using inline register_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", string, "Submit");
+            Text_InputBox(playerid, using inline register_lastname, $LASTNAME_REGTITLE, $LASTNAME_REGTEXT, $SUBMIT_BTN, $BLANK_BTN, DELUSIONAL_AI, DELUSIONAL_AI);
         }
         case INVALID_LASTNAME:{
             inline register_invalid_lastname(pid, dialogid, response, listitem, string:inputtext[]){
@@ -729,12 +743,9 @@ PlayerDialog(playerid, dialog){
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_invalid_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Character Name", "{FFFFFF}We've already told you about the format already.\nYou just want me to keep talking do you...\nType it again, now properly.", "Submit");
+            Text_InputBox(playerid, using inline register_invalid_lastname, $LASTNAME_REGTITLE, $LASTNAME_REGTEXTERROR, $SUBMIT_BTN, $BLANK_BTN);
         }
         case LOGIN:{
-            new string[104 + MAX_USERNAME + 7];
-            format(string, sizeof string, "Welcome back %s.\n\
-            {FFFFFF}This is {00FF00}%s. {FFFFFF}Please properly type in your password below. You will be logged in immediately.", PlayerData[playerid][username], SERIOUS_AI);
             inline login(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
@@ -742,33 +753,30 @@ PlayerDialog(playerid, dialog){
                     SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_SALT);
                     if(strcmp(PlayerData[playerid][password], hash) == 0){
                         getdate(PlayerData[playerid][yearloggedin], PlayerData[playerid][monthloggedin], PlayerData[playerid][dateloggedin]);
-                        LoadAllPlayerFiles(playerid);
+                        LoadAllPlayerData(playerid);
                         doSpawnPlayer(playerid, SPAWN_PLAYER);
                     }else{
                         PlayerDialog(playerid, INVALID_LOGIN);
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline login, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Login", string, "Submit");
+            Text_PasswordBox(playerid, using inline login, $LOGIN_TITLE, $LOGIN_TEXT, $SUBMIT_BTN, $BLANK_BTN, PlayerData[playerid][username], SERIOUS_AI);
         }
         case INVALID_LOGIN:{
-            new string[167 + MAX_USERNAME];
-            format(string, sizeof string, "Welcome back %s.\n\
-            {FFFFFF}You have type an incorrect password.\nPlease do remember that passwords are also case-sensitve so please type your password properly.", PlayerData[playerid][username]);
             inline login(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
                     new hash[MAX_PASS];
                     SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_SALT);
                     if(strcmp(PlayerData[playerid][password], hash) == 0){
-                        LoadAllPlayerFiles(playerid);
+                        LoadAllPlayerData(playerid);
                         doSpawnPlayer(playerid, SPAWN_PLAYER);
                     }else{
                         PlayerDialog(playerid, INVALID_LOGIN);
                     }
                 }
             }
-            Dialog_ShowCallback(playerid, using inline login, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Login", string, "Submit");
+            Text_PasswordBox(playerid, using inline login, $LOGIN_TITLE, $INVALID_LOGINTEXT, $SUBMIT_BTN, $BLANK_BTN, PlayerData[playerid][username]);
         }
         case CONFIRM_PASSWORD:{
             inline confirm_password(pid, dialogid, response, listitem, string:inputtext[]){
@@ -798,6 +806,193 @@ PlayerDialog(playerid, dialog){
             }
             Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_PASSWORD, "The Four Horsemen Project - Confirm Password", "And I was expecting that really... It's okay though.\nJust type it again and make sure to correct it this time.", "Submit");
         }
+        case CONFIRM_EMAIL:{
+            inline confirm_password(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 14){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
+                            format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
+                            PlayerDialog(playerid, REFERREDBY);
+                        }else{
+                            PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
+                        }
+                    }
+                    else{
+                        PlayerDialog(playerid, CONFIRM_EMAILSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_password, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Enter your email", "Submit");
+        }
+        case CONFIRM_EMAILSHORT:{
+            inline confirm_emailshort(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 14){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
+                            format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
+                            PlayerDialog(playerid, REFERREDBY);
+                        }else{
+                            PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
+                        }
+                    }
+                    else{
+                        PlayerDialog(playerid, CONFIRM_EMAILSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_emailshort, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is too short type it again.", "Submit");
+        }
+        case CONFIRM_EMAIL_INVALID:{
+            inline confirm_emailinvalid(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) > 14){
+                        if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
+                            format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
+                            PlayerDialog(playerid, REFERREDBY);
+                        }else{
+                            PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
+                        }
+                    }
+                    else{
+                        PlayerDialog(playerid, CONFIRM_EMAILSHORT);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline confirm_emailinvalid, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Email", "Email is invalid it should have an '@' and '.'", "Submit");
+        }
+        case CONFIRM_BIRTHMONTH:{
+            inline register_birthmonth(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, inputtext
+                if(response){
+                    PlayerData[playerid][birthmonth] = listitem+1;
+                    PlayerDialog(playerid, CONFIRM_BIRTHDATE);
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register_birthmonth, DIALOG_STYLE_LIST, "The Four Horsemen Project - Confirm Birthmonth", 
+            "January\n\
+            February\n\
+            March\n\
+            April\n\
+            May\n\
+            June\n\
+            July\n\
+            August\n\
+            September\n\
+            October\n\
+            November\n\
+            December", "Submit");
+        }
+        case CONFIRM_BIRTHDATE:{
+            new string[4*31];
+            switch(PlayerData[playerid][birthdate]){
+                case 0, 2, 4, 6, 7, 9, 11:{
+                    for(new i = 1, j = 31; i <= j; i++){
+                        if(isnull(string)) format(string, sizeof string, "%d", i);
+                        else format(string, sizeof string, "%s\n%d", string, i);
+                    }
+                }
+                    case 1:{
+                    for(new i = 1, j = 29; i <= j; i++){
+                        if(isnull(string)) format(string, sizeof string, "%d", i);
+                        else format(string, sizeof string, "%s\n%d", string, i);
+                    }
+                }
+                case 3, 5, 8, 10:{
+                        for(new i = 1, j = 30; i <= j; i++){
+                        if(isnull(string)) format(string, sizeof string, "%d", i);
+                        else format(string, sizeof string, "%s\n%d", string, i);
+                    }
+                }
+            }
+            inline register_birthdate(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, inputtext
+                if(response){
+                    PlayerData[playerid][birthdate] = listitem+1;
+                    PlayerDialog(playerid, CONFIRM_BIRTHYEAR);
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register_birthdate, DIALOG_STYLE_LIST, "The Four Horsemen Project - Confirm Birhtdate", string, "Submit");
+        }
+        case CONFIRM_BIRTHYEAR:{
+            new year, mo, da, altyear, string[7*44];
+            getdate(year, mo, da);
+            altyear = year - 50;
+            for(new i = 0, j = 44; i < j; i++){
+                if(isnull(string)) format(string, sizeof string, "%d", altyear);
+                else format(string, sizeof string, "%s\n%d", string, altyear+i);
+            }
+            inline register_birthyear(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, inputtext
+                if(response){
+                    PlayerData[playerid][birthyear] = altyear+listitem;
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register_birthyear, DIALOG_STYLE_LIST, "The Four Horsemen Project - Confirm Birthyear", string, "Submit");
+        }
+        case CONFIRM_FIRSTNAME:{
+            inline register_firstname(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_FIRSTNAME){
+                        format(PlayerData[playerid][firstname], MAX_FIRSTNAME, "%s", inputtext);
+                        PlayerDialog(playerid, CONFIRM_LASTNAME);
+                    }else{
+                        PlayerDialog(playerid, CONFIRM_INVALIDFIRSTNAME);
+                    }
+                }
+            }
+            new string[168 + 6 + 7 + 5];
+            format(string, sizeof string, "{FFFFFF}Oh! You've come to far to quit do ya?\nNow let's get to know you, since I introduced myself earlier. Remember that names starting with %s, %s, %s is forbidden.", SERIOUS_AI, DELUSIONAL_AI, OWNER);
+            Dialog_ShowCallback(playerid, using inline register_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Character Name", string, "Submit");
+        }
+        case CONFIRM_INVALIDFIRSTNAME:{
+            inline register_invalid_firstname(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_FIRSTNAME){
+                        format(PlayerData[playerid][firstname], MAX_FIRSTNAME, "%s", inputtext);
+                        PlayerDialog(playerid, LASTNAME);
+                    }else{
+                        PlayerDialog(playerid, CONFIRM_INVALIDFIRSTNAME);
+                    }
+                }
+            }
+            new string[251 + 11];
+            format(string, sizeof string, "{FFFFFF}Ah! Hehehe my bad. Your Firstname should be not longer than %d characters and shorter than 4 characters\nNote: Hi it's me again. Capitalizing the name is not a must since the system would save the first letter of the name to be capitalized", MAX_LASTNAME);
+            Dialog_ShowCallback(playerid, using inline register_invalid_firstname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Character Name", string, "Submit");
+        }
+        case CONFIRM_LASTNAME:{
+            inline register_lastname(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_LASTNAME){
+                        format(PlayerData[playerid][lastname], MAX_LASTNAME, "%s", inputtext);
+                    }else{
+                        PlayerDialog(playerid, CONFIRM_INVALIDLASTNAME);
+                    }
+                }
+            }
+            new string[495 + 6 + 6];
+            format(string, sizeof string, "{FFFFFF}And finally your lastname\nNote: Sorry for interrupting %s so much but I need to tell you something.\nThis server have firstname_middlename_lastname format in which noobs, like you will only have firstname_lastname\n\
+            The middlename is intended after marriage, if you are a female, or if you get adopted by a family.\nNote {FF0000}%s{FFFFFF}: Although boss would like it if you buy a middlename from him.\nMiddlename's will be the first letter only but you need to type in a literal middlename", DELUSIONAL_AI, DELUSIONAL_AI);
+            Dialog_ShowCallback(playerid, using inline register_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Character Name", string, "Submit");
+        }
+        case CONFIRM_INVALIDLASTNAME:{
+            inline register_invalid_lastname(pid, dialogid, response, listitem, string:inputtext[]){
+                #pragma unused pid, dialogid, listitem
+                if(response){
+                    if(strlen(inputtext) >= 4 && strlen(inputtext) <= MAX_LASTNAME){
+                        format(PlayerData[playerid][lastname], MAX_LASTNAME, "%s", inputtext);
+                    }else{
+                        PlayerDialog(playerid, CONFIRM_INVALIDLASTNAME);
+                    }
+                }
+            }
+            Dialog_ShowCallback(playerid, using inline register_invalid_lastname, DIALOG_STYLE_INPUT, "The Four Horsemen Project - Confirm Character Name", "{FFFFFF}We've already told you about the format already.\nYou just want me to keep talking do you...\nType it again, now properly.", "Submit");
+        }
     }
     return 1;
 }
@@ -817,12 +1012,11 @@ doSpawnPlayer(playerid, type){
             SetPlayerVirtualWorld(playerid, PlayerData[playerid][virtualworld]);
             TogglePlayerSpectating(playerid, FALSE);
             TogglePlayerControllable(playerid, TRUE);
-            new string[MAX_PLAYER_NAME];
             if(isnull(PlayerData[playerid][middlename]))
-                format(string, sizeof string, "%s_%s", PlayerData[playerid][firstname], PlayerData[playerid][lastname]);
+                format(PlayerData[playerid][fullname], MAX_USERNAME, "%s_%s", PlayerData[playerid][firstname], PlayerData[playerid][lastname]);
             else
-                format(string, sizeof string, "%s_%s_%s", PlayerData[playerid][firstname], PlayerData[playerid][middlename], PlayerData[playerid][lastname]);
-            SetPlayerName(playerid, string);
+                format(PlayerData[playerid][fullname], MAX_USERNAME, "%s_%s_%s", PlayerData[playerid][firstname], PlayerData[playerid][middlename], PlayerData[playerid][lastname]);
+            SetPlayerName(playerid, PlayerData[playerid][fullname]);
             BitFlag_On(PlayerFlag{ playerid }, LOGGED_IN_PLAYER);
             HideTextDrawForPlayer(playerid, MAINMENUFORPLAYER);
         }case REVIVE_PLAYER:{
@@ -973,7 +1167,7 @@ Textdraws(playerid, type, textdrawtype){
                     TextDrawSetProportional(MainMenu[3], 1);
                     TextDrawSetShadow(MainMenu[3], 0);
 
-                    MainMenu[4] = TextDrawCreate(298.000061, 408.773376, "Copyrights The Four Horsemen Project. All Rights Reserved.");
+                    MainMenu[4] = TextDrawCreate(298.000061, 408.773376, "Project is made for the benefit and fun of the SA-MP community");
                     TextDrawLetterSize(MainMenu[4], 0.400000, 1.600000);
                     TextDrawAlignment(MainMenu[4], 2);
                     TextDrawColor(MainMenu[4], -1);
@@ -989,16 +1183,16 @@ Textdraws(playerid, type, textdrawtype){
         case PLAYER_TEXTDRAWS:{
             switch(textdrawtype){
                 case AFTER_REGISTER:{
-                    AfterRegister[playerid][0] = CreatePlayerTextDraw(playerid, 25.999938, 129.520019, "box");
-                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][0], 0.000000, 17.439998);
+                    AfterRegister[playerid][0] = CreatePlayerTextDraw(playerid, 25.999937, 129.520019, "box");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][0], 0.000000, 19.839996);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][0], 243.000000, 0.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][0], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][0], -1);
                     PlayerTextDrawUseBox(playerid, AfterRegister[playerid][0], 1);
-                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][0], 170);
+                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][0], 255);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][0], 0);
                     PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][0], 0);
-                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][0], 170);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][0], 255);
                     PlayerTextDrawFont(playerid, AfterRegister[playerid][0], 1);
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][0], 1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][0], 0);
@@ -1026,7 +1220,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][2], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][2], 0);
 
-                    AfterRegister[playerid][3] = CreatePlayerTextDraw(playerid, 27.600034, 152.666625, "Username: Joker29");
+                    AfterRegister[playerid][3] = CreatePlayerTextDraw(playerid, 28.400037, 157.146591, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][3], 0.400000, 1.600000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][3], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][3], -1);
@@ -1036,10 +1230,10 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawFont(playerid, AfterRegister[playerid][3], 1);
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][3], 1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][3], 0);
-                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][3], true);
 
-                    AfterRegister[playerid][4] = CreatePlayerTextDraw(playerid, 28.400035, 169.093276, "Password: Alterego29");
+                    AfterRegister[playerid][4] = CreatePlayerTextDraw(playerid, 27.600036, 178.799987, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][4], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][4], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][4], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][4], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][4], 0);
@@ -1050,8 +1244,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][4], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][4], true);
 
-                    AfterRegister[playerid][5] = CreatePlayerTextDraw(playerid, 27.600030, 184.026702, "Email: laternoobs@gmail.com");
+                    AfterRegister[playerid][5] = CreatePlayerTextDraw(playerid, 26.800031, 199.706726, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][5], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][5], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][5], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][5], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][5], 0);
@@ -1062,8 +1257,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][5], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][5], true);
 
-                    AfterRegister[playerid][6] = CreatePlayerTextDraw(playerid, 28.400030, 199.706756, "Birthdate: 04-22-1996");
+                    AfterRegister[playerid][6] = CreatePlayerTextDraw(playerid, 27.600030, 220.613464, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][6], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][6], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][6], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][6], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][6], 0);
@@ -1074,8 +1270,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][6], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][6], true);
 
-                    AfterRegister[playerid][7] = CreatePlayerTextDraw(playerid, 28.400032, 214.640182, "Character Name: Earl Tacogdoy");
+                    AfterRegister[playerid][7] = CreatePlayerTextDraw(playerid, 28.400030, 242.266906, "");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][7], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][7], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][7], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][7], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][7], 0);
@@ -1086,13 +1283,11 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][7], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][7], true);
 
-                    AfterRegister[playerid][8] = CreatePlayerTextDraw(playerid, 129.999969, 264.666687, "Confirm");
+                    AfterRegister[playerid][8] = CreatePlayerTextDraw(playerid, 129.999969, 290.053405, "Confirm");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][8], 0.400000, 1.600000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][8], 0.000000, 58.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][8], 241.869995, 10.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][8], 2);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][8], -1);
-                    PlayerTextDrawUseBox(playerid, AfterRegister[playerid][8], 1);
-                    PlayerTextDrawBoxColor(playerid, AfterRegister[playerid][8], 255);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][8], 0);
                     PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][8], 1);
                     PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][8], 255);
@@ -1101,7 +1296,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][8], 0);
                     PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][8], true);
 
-                    AfterRegister[playerid][9] = CreatePlayerTextDraw(playerid, 96.200004, 261.773406, "LD_SPAC:white");
+                    AfterRegister[playerid][9] = CreatePlayerTextDraw(playerid, 97.000015, 287.160217, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][9], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][9], 1.000000, 20.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][9], 1);
@@ -1113,7 +1308,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][9], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][9], 0);
 
-                    AfterRegister[playerid][10] = CreatePlayerTextDraw(playerid, 161.800033, 261.773406, "LD_SPAC:white");
+                    AfterRegister[playerid][10] = CreatePlayerTextDraw(playerid, 161.800033, 287.160217, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][10], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][10], 1.000000, 20.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][10], 1);
@@ -1125,7 +1320,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][10], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][10], 0);
 
-                    AfterRegister[playerid][11] = CreatePlayerTextDraw(playerid, 96.999961, 261.773376, "LD_SPAC:white");
+                    AfterRegister[playerid][11] = CreatePlayerTextDraw(playerid, 96.999961, 287.160064, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][11], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][11], 66.000000, 1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][11], 1);
@@ -1137,7 +1332,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][11], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][11], 0);
 
-                    AfterRegister[playerid][12] = CreatePlayerTextDraw(playerid, 96.999954, 281.186767, "LD_SPAC:white");
+                    AfterRegister[playerid][12] = CreatePlayerTextDraw(playerid, 96.999954, 307.320159, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][12], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][12], 66.000000, 1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][12], 1);
@@ -1149,9 +1344,9 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][12], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][12], 0);
 
-                    AfterRegister[playerid][13] = CreatePlayerTextDraw(playerid, 21.799983, 125.133331, "LD_SPAC:white");
+                    AfterRegister[playerid][13] = CreatePlayerTextDraw(playerid, 21.799982, 125.133331, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][13], 0.000000, 0.000000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][13], 1.000000, 164.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][13], 1.000000, 186.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][13], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][13], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][13], 0);
@@ -1163,7 +1358,7 @@ Textdraws(playerid, type, textdrawtype){
 
                     AfterRegister[playerid][14] = CreatePlayerTextDraw(playerid, 245.000091, 125.133331, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][14], 0.000000, 0.000000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][14], 2.000000, 164.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][14], 1.000000, 185.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][14], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][14], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][14], 0);
@@ -1175,7 +1370,7 @@ Textdraws(playerid, type, textdrawtype){
 
                     AfterRegister[playerid][15] = CreatePlayerTextDraw(playerid, 21.799991, 126.626647, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][15], 0.000000, 0.000000);
-                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][15], 223.000000, -1.000000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][15], 224.000000, 1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][15], 1);
                     PlayerTextDrawColor(playerid, AfterRegister[playerid][15], -1);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][15], 0);
@@ -1185,7 +1380,7 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][15], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][15], 0);
 
-                    AfterRegister[playerid][16] = CreatePlayerTextDraw(playerid, 22.599992, 289.400115, "LD_SPAC:white");
+                    AfterRegister[playerid][16] = CreatePlayerTextDraw(playerid, 23.399990, 311.800262, "LD_SPAC:white");
                     PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][16], 0.000000, 0.000000);
                     PlayerTextDrawTextSize(playerid, AfterRegister[playerid][16], 223.000000, -1.000000);
                     PlayerTextDrawAlignment(playerid, AfterRegister[playerid][16], 1);
@@ -1196,6 +1391,19 @@ Textdraws(playerid, type, textdrawtype){
                     PlayerTextDrawFont(playerid, AfterRegister[playerid][16], 4);
                     PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][16], 0);
                     PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][16], 0);
+
+                    AfterRegister[playerid][17] = CreatePlayerTextDraw(playerid, 28.400009, 263.173522, "Referredby: Jester");
+                    PlayerTextDrawLetterSize(playerid, AfterRegister[playerid][17], 0.400000, 1.600000);
+                    PlayerTextDrawTextSize(playerid, AfterRegister[playerid][17], 241.869995, 10.000000);
+                    PlayerTextDrawAlignment(playerid, AfterRegister[playerid][17], 1);
+                    PlayerTextDrawColor(playerid, AfterRegister[playerid][17], -1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][17], 0);
+                    PlayerTextDrawSetOutline(playerid, AfterRegister[playerid][17], 0);
+                    PlayerTextDrawBackgroundColor(playerid, AfterRegister[playerid][17], 255);
+                    PlayerTextDrawFont(playerid, AfterRegister[playerid][17], 1);
+                    PlayerTextDrawSetProportional(playerid, AfterRegister[playerid][17], 1);
+                    PlayerTextDrawSetShadow(playerid, AfterRegister[playerid][17], 0);
+                    PlayerTextDrawSetSelectable(playerid, AfterRegister[playerid][17], true);
                 }
             }
         }
@@ -1211,7 +1419,7 @@ ShowTextDrawForPlayer(playerid, type){
             }
         }
         case AFTERREGISTERFORPLAYER:{
-            Textdraws(playerid, GLOBAL_TEXTDRAWS, AFTER_REGISTER);
+            Textdraws(playerid, PLAYER_TEXTDRAWS, AFTER_REGISTER);
             new string[12 + MAX_PASS];
             format(string, sizeof string, "Username: %s", PlayerData[playerid][username]);
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][3], string);
@@ -1223,7 +1431,9 @@ ShowTextDrawForPlayer(playerid, type){
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][6], string);
             format(string, sizeof string, "Character Name: %s %s", PlayerData[playerid][email]);
             PlayerTextDrawSetString(playerid, AfterRegister[playerid][7], string);
-            for(new i = 0, j = 17; i < j; i++){
+            format(string, sizeof string, "Referredby: %s", PlayerData[playerid][referredby]);
+            PlayerTextDrawSetString(playerid, AfterRegister[playerid][17], string);
+            for(new i = 0, j = 18; i < j; i++){
                 PlayerTextDrawShow(playerid, AfterRegister[playerid][i]);
             }
             SelectTextDraw(playerid, 0xFFFFFF);
@@ -1240,10 +1450,98 @@ HideTextDrawForPlayer(playerid, type){
             }
         }
         case AFTERREGISTERFORPLAYER:{
-            for(new i = 0, j = 17; i < j; i++){
+            for(new i = 0, j = 18; i < j; i++){
                 PlayerTextDrawDestroy(playerid, AfterRegister[playerid][i]);
             }
         }
+    }
+    return 1;
+}
+
+CreateDatabase(){
+    if(!SL::ExistsTable("Accounts")){
+        new handle = SL::Open(SL::CREATE, "Accounts", "", .database = Database);
+        SL::AddTableEntry(handle, "sqlid", SL_TYPE_INT, .auto_increment = true, .setprimary = true);
+        SL::AddTableEntry(handle, "username", SL_TYPE_VCHAR, MAX_USERNAME);
+        SL::AddTableEntry(handle, "password", SL_TYPE_VCHAR, MAX_PASS);
+        SL::AddTableEntry(handle, "salt", SL_TYPE_VCHAR, MAX_SALT);
+        SL::AddTableEntry(handle, "email", SL_TYPE_VCHAR, MAX_EMAIL);
+        SL::AddTableEntry(handle, "birthmonth", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "birthdate", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "birthyear", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "language", SL_TYPE_VCHAR, 3);
+        SL::Close(handle);
+    }
+    if(!SL::ExistsTable("Data")){
+        new handle = SL::Open(SL::CREATE, "Data", "", .database = Database);
+        SL::AddTableEntry(handle, "sqlid", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "firstname", SL_TYPE_VCHAR, MAX_FIRSTNAME);
+        SL::AddTableEntry(handle, "middlename", SL_TYPE_VCHAR, MAX_MIDDLENAME);
+        SL::AddTableEntry(handle, "lastname", SL_TYPE_VCHAR, MAX_LASTNAME);
+        SL::AddTableEntry(handle, "health", SL_TYPE_FLOAT);
+        SL::AddTableEntry(handle, "armor", SL_TYPE_FLOAT);
+        SL::AddTableEntry(handle, "exp", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "meleekill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "handgunkill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "shotgunkill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "smgkill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "riflekill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "sniperkill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "otherkill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "deaths", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "cash", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "coins", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "x", SL_TYPE_FLOAT);
+        SL::AddTableEntry(handle, "y", SL_TYPE_FLOAT);
+        SL::AddTableEntry(handle, "z", SL_TYPE_FLOAT);
+        SL::AddTableEntry(handle, "a", SL_TYPE_FLOAT);
+        SL::AddTableEntry(handle, "interiorid", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "virtualworld", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "monthregistered", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "dateregistered", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "yearregistered", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "monthloggedin", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "dateloggedin", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "yearloggedin", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "referredby", SL_TYPE_VCHAR, MAX_USERNAME);
+        SL::Close(handle);
+    }
+    if(!SL::ExistsTable("Jobs")){
+        new handle = SL::Open(SL::CREATE, "Jobs", "", .database = Database);
+        SL::AddTableEntry(handle, "sqlid", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "jobs_0", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "jobs_1", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "craftingskill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "smithingskill", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "deliveryskill", SL_TYPE_INT);
+        SL::Close(handle);
+    }
+    if(!SL::ExistsTable("Weapons")){
+        new handle = SL::Open(SL::CREATE, "Weapons", "", .database = Database);
+        new string[13];
+        SL::AddTableEntry(handle, "sqlid", SL_TYPE_INT);
+        for(new i = 0, j = MAX_SLOT; i < j; i++){
+            format(string, sizeof string, "weapons_%d", i);
+            SL::AddTableEntry(handle, string, SL_TYPE_INT);
+            format(string, sizeof string, "ammo_%d", i);
+            SL::AddTableEntry(handle, string, SL_TYPE_INT);
+        }
+        SL::Close(handle);
+    }
+    if(!SL::ExistsTable("Faults")){
+        new handle = SL::Open(SL::CREATE, "Faults", "", .database = Database);
+        SL::AddTableEntry(handle, "sqlid", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "banmonth", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "bandate", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "banyear", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "banupliftmonth", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "banupliftdate", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "banupliftyear", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "totalbans", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "warnings", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "kicks", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "penalties", SL_TYPE_INT);
+        SL::Close(handle);
     }
     return 1;
 }
@@ -1255,6 +1553,9 @@ public OnGameModeInit(){
     UsePlayerPedAnims(), EnableStuntBonusForAll(0), DisableInteriorEnterExits(),
     ShowPlayerMarkers(PLAYER_MARKERS_MODE_OFF), ManualVehicleEngineAndLights(),
     ShowNameTags(0);
+    Database = SL::Connect("database.db");
+    CreateDatabase();
+    Langs_Add("EN", "English");
     /*dc = DCC_FindChannelById("437216712971255809");
     DCC_SendChannelMessage(dc, "Hey! The server just had just been started, come on in!");*/
     return 1;
@@ -1279,23 +1580,24 @@ public OnPlayerConnect(playerid){
     TogglePlayerClock(playerid, TRUE);
 
     AccountQuery(playerid, EMPTY_DATA);
+    PlayerFlag{ playerid } = PlayerFlags:0;
     GetPlayerName(playerid, PlayerData[playerid][username], MAX_USERNAME);
-    /*new string[43 + MAX_USERNAME];
-    format(string, sizeof string, "%s has joined the server. Care to join him?", PlayerData[playerid][username]);
-    DCC_SendChannelMessage(dc, string);*/
-    if(strfind(PlayerData[playerid][username], "_") != -1) return SCM(playerid, -1, "Your name contains the special character '_' underscore which is forbidden for this server."), Delay(playerid, DELAYED_KICK);
-    if(fexist(UserAccFilePath(playerid))){
+    if(SL::RowExistsEx("Accounts", "username", PlayerData[playerid][username])){
         AccountQuery(playerid, LOAD_CREDENTIALS);
         PlayerDialog(playerid, LOGIN);
     }else{
         PlayerDialog(playerid, REGISTER);
     }
+    /*new string[43 + MAX_USERNAME];
+    format(string, sizeof string, "%s has joined the server. Care to join him?", PlayerData[playerid][username]);
+    DCC_SendChannelMessage(dc, string);*/
+    if(strfind(PlayerData[playerid][username], "_") != -1) return SCM(playerid, -1, "Your name contains the special character '_' underscore which is forbidden for this server."), Delay(playerid, DELAYED_KICK);
     return 1;
 }
 
 public OnPlayerDisconnect(playerid, reason){
     if(BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)){
-        SaveAllPlayerFiles(playerid);
+        SaveAllPlayerData(playerid);
         /*new string[36 + MAX_USERNAME];
         format(string, sizeof string, "%s has left the server. Now I'm sad.");
         DCC_SendChannelMessage(dc, string);*/
@@ -1353,27 +1655,64 @@ public OnPlayerDeath(playerid, killerid, reason){
 }*/
 
 public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid){
-    if(playertextid == AfterRegister[playerid][4]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_PASSWORD);
-    }
-    else if(playertextid == AfterRegister[playerid][5]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_EMAIL);
-    }
-    else if(playertextid == AfterRegister[playerid][6]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_BIRTHDATE);
-    }
-    else if(playertextid == AfterRegister[playerid][7]){
-        HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
-        PlayerDialog(playerid, CONFIRM_FIRSTNAME);
-    }
-    else if(playertextid == AfterRegister[playerid][8]){
-        SHA256_PassHash(PlayerData[playerid][password], PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
-        SaveAllPlayerFiles(playerid);
+    if(_:playertextid != INVALID_TEXT_DRAW){
+        if(playertextid == AfterRegister[playerid][4]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_PASSWORD);
+        }
+        else if(playertextid == AfterRegister[playerid][5]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_EMAIL);
+        }
+        else if(playertextid == AfterRegister[playerid][6]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_BIRTHMONTH);
+        }
+        else if(playertextid == AfterRegister[playerid][7]){
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            PlayerDialog(playerid, CONFIRM_FIRSTNAME);
+        }
+        else if(playertextid == AfterRegister[playerid][8]){
+            HideTextDrawForPlayer(playerid, MAINMENUFORPLAYER);
+            HideTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
+            SHA256_PassHash(PlayerData[playerid][password], PlayerData[playerid][salt], PlayerData[playerid][password], MAX_PASS);
+            AccountQuery(playerid, CREATE_DATA);
+            doSpawnPlayer(playerid, SPAWN_PLAYER);
+        }
+        CancelSelectTextDraw(playerid);
     }
     return 1;
+}
+
+public OnPlayerText(playerid, text[]){
+    if(!BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)) return SCM(playerid, -1, "You aren't logged in"), 0;
+    else if(BitFlag_Get(PlayerFlag{ playerid }, PLAYER_IS_DEAD)) return SCM(playerid, -1, "You are dead"), 0;
+    else if(BitFlag_Get(PlayerFlag{ playerid }, PLAYER_IS_DYING)) return SCM(playerid, -1, "You are dying to talk"), 0;
+    if(strlen(text) > 100) return SCM(playerid, -1, "Message is too long"), 0;
+    else if(BitFlag_Get(PlayerFlag{ playerid}, PLAYER_IS_ONDM)){
+        foreach(new i : Player){
+            if(BitFlag_Get(PlayerFlag{ i }, PLAYER_IS_ONDM)){
+                format(text, 128, "%s: %s", PlayerData[playerid][username], text);
+                SCM(i, -1, text);
+                return 0;
+            }
+        }
+    }
+    else{
+        foreach(new i : Player){
+            new Float: ix, Float: iy, Float: iz;
+            GetPlayerPos(i, ix, iy, iz);
+            if(IsPlayerInRangeOfPoint(playerid, 5.0, ix, iy, iz)){
+                Text_Send(i, $PROXIMITY_CHATN, PlayerData[playerid][fullname], text);
+            }else if(IsPlayerInRangeOfPoint(playerid, 10.0, ix, iy, iz)){
+                Text_Send(i, $PROXIMITY_CHATNR, PlayerData[playerid][fullname], text);
+            }
+            else if(IsPlayerInRangeOfPoint(playerid, 15.0, ix, iy, iz)){
+                Text_Send(i, $PROXIMITY_CHATNT, PlayerData[playerid][fullname], text);
+            }
+        }
+    }
+    return 0;
 }
 
 // Custom callbacks
@@ -1417,9 +1756,9 @@ task checktimer[250](){
 task datatimer[1000*600](){
     foreach( new playerid : Player ){
         if(BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)){
-            SaveAllPlayerFiles(playerid), AccountQuery(playerid, EMPTY_DATA),
+            SaveAllPlayerData(playerid), AccountQuery(playerid, EMPTY_DATA),
             GetPlayerName(playerid, PlayerData[playerid][username], MAX_USERNAME),
-            LoadAllPlayerFiles(playerid);
+            LoadAllPlayerData(playerid);
         }
         SCM(playerid, -1, "Jester: The system rebuffered. System saved all data and did a reload");
     }
