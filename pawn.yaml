@@ -2,6 +2,7 @@ dependencymeta:
   site: ""
   user: JesterlJoker
   repo: freeroam
+version: 0.3.DL
 entry: fr.pwn
 output: fr.amx
 dependencies:
