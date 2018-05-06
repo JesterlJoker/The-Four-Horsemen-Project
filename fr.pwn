@@ -51,6 +51,7 @@ loadtext main[CHAT];
 #define                                 MAX_MIDDLENAME                      (2)
 #define                                 MAX_LASTNAME                        (10)
 #define                                 MAX_TAG                             (5)
+#define                                 MAX_DOORS                           (10)
 
 #define                                 GPA                                 (52915)
 #define                                 GGA                                 (52916)
@@ -101,7 +102,7 @@ public OnPlayerConnect(playerid){
     AccountQuery(playerid, EMPTY_DATA);
     PlayerFlag{ playerid } = PlayerFlags:0;
     GetPlayerName(playerid, PlayerData[playerid][username], MAX_USERNAME);
-    if(SL::RowExistsEx("Accounts", "username", PlayerData[playerid][username]), Database){
+    if(SL::RowExistsEx("Accounts", "username", PlayerData[playerid][username], Database)){
         AccountQuery(playerid, LOAD_CREDENTIALS);
         PlayerDialog(playerid, LOGIN);
     }else{

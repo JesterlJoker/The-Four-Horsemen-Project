@@ -52,7 +52,7 @@ AccountQuery(playerid, query){
         case CREATE_DATA:{
             #if defined USE_SQLITE
                 SL::Begin(Database);
-                new handle = SL::Open(SL::INSERT, "Accounts", "", .database = Database);
+                new handle = SL::Open(SL::INSERT, "Accounts", .database = Database);
                 SL::ToggleAutoIncrement(handle, true);
                 SL::WriteString(handle, "username", PlayerData[playerid][username]);
                 SL::WriteString(handle, "password", PlayerData[playerid][password]);
@@ -151,7 +151,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_ACCOUNT:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::UPDATE, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
                 SL::WriteString(handle, "username", PlayerData[playerid][username]);
                 SL::WriteString(handle, "password", PlayerData[playerid][password]);
                 SL::WriteString(handle, "salt", PlayerData[playerid][salt]);
@@ -166,7 +166,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_DATA:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
                 SL::WriteString(handle, "firstname", PlayerData[playerid][firstname]);
                 SL::WriteString(handle, "middlename", PlayerData[playerid][middlename]);
                 SL::WriteString(handle, "lastname", PlayerData[playerid][lastname]);
@@ -189,7 +189,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_KILLS:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::UPDATE, "Kills", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "Kills", "sqlid", PlayerData[playerid][sqlid]);
                 SL::WriteInt(handle, "meleekill", PlayerData[playerid][meleekill]);
                 SL::WriteInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
                 SL::WriteInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
@@ -203,7 +203,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_POSITION:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::UPDATE, "Position", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "Position", "sqlid", PlayerData[playerid][sqlid]);
                 SL::WriteFloat(handle, "x", PlayerData[playerid][px]);
                 SL::WriteFloat(handle, "y", PlayerData[playerid][py]);
                 SL::WriteFloat(handle, "z", PlayerData[playerid][pz]);
@@ -216,7 +216,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_JOB:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::UPDATE, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
                 SL::WriteInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
                 SL::WriteInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
                 SL::WriteInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
@@ -228,7 +228,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_WEAPON:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::UPDATE, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "Weapons", "sqlid", PlayerData[playerid][sqlid], .database = Database);
                 new string[13];
                 for(new i = 0, j = MAX_SLOT; i < j; i++){
                     format(string, sizeof string, "weapons_%d", i);
@@ -243,7 +243,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_PENALTIES:{
             #if defined USE_SQLITE
-                new handle = SL::Open(SL::UPDATE, "Faults", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "Faults", "sqlid", PlayerData[playerid][sqlid], .database = Database);
                 SL::WriteInt(handle, "banned", (PlayerData[playerid][banned]) ? 1 : 0);
                 SL::WriteInt(handle, "banmonth", PlayerData[playerid][banmonth]);
                 SL::WriteInt(handle, "bandate", PlayerData[playerid][bandate]);
@@ -261,7 +261,7 @@ AccountQuery(playerid, query){
         }
         case SAVE_ADMINRANK:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::UPDATE, "AdminRank", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::UPDATE, "AdminRank", "sqlid", PlayerData[playerid][sqlid], .database = Database);
                 SL::WriteInt(handle, "rank", PlayerData[playerid][rank]);
                 SL::WriteInt(handle, "banrecords", PlayerData[playerid][banrecords]);
                 SL::WriteInt(handle, "kickrecords", PlayerData[playerid][kickrecords]);
@@ -276,7 +276,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_CREDENTIALS:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Accounts", "username", PlayerData[playerid][username]);
+                new handle = SL::OpenEx(SL::READ, "Accounts", "username", PlayerData[playerid][username], .database = Database);
                 SL::ReadInt(handle, "sqlid", PlayerData[playerid][sqlid]);
                 SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
                 SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
@@ -286,7 +286,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_ACCOUNT:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::READ, "Accounts", "sqlid", PlayerData[playerid][sqlid]);
                 SL::ReadString(handle, "username", PlayerData[playerid][username], MAX_USERNAME);
                 SL::ReadString(handle, "password", PlayerData[playerid][password], MAX_PASS);
                 SL::ReadString(handle, "salt", PlayerData[playerid][salt], MAX_SALT);
@@ -301,7 +301,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_DATA:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Data", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::READ, "Data", "sqlid", PlayerData[playerid][sqlid]);
                 SL::ReadString(handle, "firstname", PlayerData[playerid][firstname], MAX_FIRSTNAME);
                 SL::ReadString(handle, "middlename", PlayerData[playerid][middlename], MAX_MIDDLENAME);
                 SL::ReadString(handle, "lastname", PlayerData[playerid][lastname], MAX_LASTNAME);
@@ -324,7 +324,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_KILLS:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Kills", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::READ, "Kills", "sqlid", PlayerData[playerid][sqlid]);
                 SL::ReadInt(handle, "meleekill", PlayerData[playerid][meleekill]);
                 SL::ReadInt(handle, "handgunkill", PlayerData[playerid][handgunkill]);
                 SL::ReadInt(handle, "shotgunkill", PlayerData[playerid][shotgunkill]);
@@ -338,7 +338,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_POSITION:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Position", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::READ, "Position", "sqlid", PlayerData[playerid][sqlid]);
                 SL::ReadFloat(handle, "x", PlayerData[playerid][px]);
                 SL::ReadFloat(handle, "y", PlayerData[playerid][py]);
                 SL::ReadFloat(handle, "z", PlayerData[playerid][pz]);
@@ -351,7 +351,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_JOB:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::READ, "Jobs", "sqlid", PlayerData[playerid][sqlid]);
                 SL::ReadInt(handle, "jobs_0", PlayerData[playerid][jobs][0]);
                 SL::ReadInt(handle, "jobs_1", PlayerData[playerid][jobs][1]);
                 SL::ReadInt(handle, "craftingskill", PlayerData[playerid][craftingskill]);
@@ -363,7 +363,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_WEAPONS:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::READ, "Weapons", "sqlid", PlayerData[playerid][sqlid]);
                 new string[13];
                 for(new i = 0, j = MAX_SLOT; i < j; i++){
                     format(string, sizeof string, "weapons_%d", i);
@@ -378,7 +378,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_PENALTIES:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "Faults", "sqlid", PlayerData[playerid][sqlid]),
+                new handle = SL::Open(SL::READ, "Faults", "sqlid", PlayerData[playerid][sqlid]),
                 banint;
                 SL::ReadInt(handle, "banned", banint);
                 PlayerData[playerid][banned] = (banint) ? TRUE : FALSE;
@@ -398,7 +398,7 @@ AccountQuery(playerid, query){
         }
         case LOAD_ADMINRANK:{
             #if defined USE_SQLITE
-                new handle = SL::OpenEx(SL::READ, "AdminRank", "sqlid", PlayerData[playerid][sqlid]);
+                new handle = SL::Open(SL::READ, "AdminRank", "sqlid", PlayerData[playerid][sqlid]);
                 SL::ReadInt(handle, "rank", PlayerData[playerid][rank]);
                 SL::ReadInt(handle, "banrecords", PlayerData[playerid][banrecords]);
                 SL::ReadInt(handle, "kickrecords", PlayerData[playerid][kickrecords]);
@@ -415,7 +415,7 @@ AccountQuery(playerid, query){
             // Emptying Account Data
             PlayerData[playerid][username] = PlayerData[playerid][password] = PlayerData[playerid][salt] =
             PlayerData[playerid][email] = EOS;
-            PlayerData[playerid][language][0] = 'E', PlayerData[playerid][language][1] = 'N', PlayerData[playerid][language][2] = EOS;
+            PlayerData[playerid][language] = "EN";
             PlayerData[playerid][birthmonth] = PlayerData[playerid][birthdate] = PlayerData[playerid][birthyear] = 
             PlayerData[playerid][monthregistered] = PlayerData[playerid][dateregistered] = PlayerData[playerid][yearregistered] =
             PlayerData[playerid][monthloggedin] = PlayerData[playerid][dateloggedin] = PlayerData[playerid][yearloggedin] = 0;
@@ -548,8 +548,8 @@ PlayerDialog(playerid, dialog){
             Text_ListBox(playerid, using inline register_birthdate, $BIRTHDATE_REGTITLE, $BIRTHDATE_REGLIST, $SUBMIT_BTN, $BLANK_BTN, string);
         }
         case BIRTHYEAR:{
-            new altyear, ye, mo, da, string[10*50];
-            getdate(ye, mo, da);
+            new altyear, ye, mo, day, string[10*50];
+            getdate(ye, mo, day);
             altyear = ye - 50;
             for(new i = altyear, j = ye; i < j; i++){
                 if(isnull(string)) format(string, sizeof string, "%d", i);
@@ -625,25 +625,27 @@ PlayerDialog(playerid, dialog){
             inline register_referral(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
+                    if(isnull(inputtext)) return PlayerDialog(playerid, FIRSTNAME);
                     if(SL::RowExistsEx("Accounts", "username", inputtext, Database)){
                         format(PlayerData[playerid][referredby], MAX_USERNAME, "%s", inputtext);
                         PlayerDialog(playerid, FIRSTNAME);
                     }else{PlayerDialog(playerid, REFERREDBY_DN_EXIST);}
-                }else{PlayerDialog(playerid, FIRSTNAME);}
+                }
             }
-            Text_InputBox(playerid, using inline register_referral, $REFERREDBY_REGTITLE, $REFERREDBY_REGTEXT, $SUBMIT_BTN, $SKIP_BTN);
+            Text_InputBox(playerid, using inline register_referral, $REFERREDBY_REGTITLE, $REFERREDBY_REGTEXT, $SUBMIT_BTN, $BLANK_BTN);
         }
         case REFERREDBY_DN_EXIST:{
             inline register_refferal_dne(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, listitem
                 if(response){
+                    if(isnull(inputtext)) return PlayerDialog(playerid, FIRSTNAME);
                     if(SL::RowExistsEx("Accounts", "username", inputtext, Database)){
                         format(PlayerData[playerid][referredby], MAX_USERNAME, "%s", inputtext);
                         PlayerDialog(playerid, FIRSTNAME);
                     }else{PlayerDialog(playerid, REFERREDBY_DN_EXIST);}
-                }else{PlayerDialog(playerid, FIRSTNAME);}
+                }
             }
-            Text_InputBox(playerid, using inline register_refferal_dne, $REFERREDBY_REGTEXT, $REFERREDBY_REGNOTEXT, $SUBMIT_BTN, $SKIP_BTN);
+            Text_InputBox(playerid, using inline register_refferal_dne, $REFERREDBY_REGTEXT, $REFERREDBY_REGNOTEXT, $SUBMIT_BTN, $BLANK_BTN);
         }
         case FIRSTNAME:{
             inline register_firstname(pid, dialogid, response, listitem, string:inputtext[]){
@@ -709,7 +711,6 @@ PlayerDialog(playerid, dialog){
                 if(response){
                     new hash[MAX_PASS];
                     SHA256_PassHash(inputtext, PlayerData[playerid][salt], hash, MAX_PASS);
-                    printf("%s | %s | %s", PlayerData[playerid][password], PlayerData[playerid][salt], hash);
                     if(strcmp(PlayerData[playerid][password], hash, TRUE) == 0){
                         getdate(PlayerData[playerid][yearloggedin], PlayerData[playerid][monthloggedin], PlayerData[playerid][dateloggedin]);
                         new handle = SL::Open(SL::UPDATE, "Data", "sqlid", PlayerData[playerid][sqlid]);
@@ -783,7 +784,7 @@ PlayerDialog(playerid, dialog){
                     if(strlen(inputtext) > 14){
                         if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
                             format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
-                            PlayerDialog(playerid, REFERREDBY);
+                            ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
                         }else{
                             PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
                         }
@@ -802,7 +803,7 @@ PlayerDialog(playerid, dialog){
                     if(strlen(inputtext) > 14){
                         if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
                             format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
-                            PlayerDialog(playerid, REFERREDBY);
+                            ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
                         }else{
                             PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
                         }
@@ -821,7 +822,7 @@ PlayerDialog(playerid, dialog){
                     if(strlen(inputtext) > 14){
                         if(strfind(inputtext, "@") != -1 && strfind(inputtext, ".") != -1){
                             format(PlayerData[playerid][email], MAX_EMAIL, "%s", inputtext);
-                            PlayerDialog(playerid, REFERREDBY);
+                            ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
                         }else{
                             PlayerDialog(playerid, CONFIRM_EMAIL_INVALID);
                         }
@@ -841,19 +842,7 @@ PlayerDialog(playerid, dialog){
                     PlayerDialog(playerid, CONFIRM_BIRTHDATE);
                 }
             }
-            Dialog_ShowCallback(playerid, using inline register_birthmonth, DIALOG_STYLE_LIST, "The Four Horsemen Project - Confirm Birthmonth", 
-            "January\n\
-            February\n\
-            March\n\
-            April\n\
-            May\n\
-            June\n\
-            July\n\
-            August\n\
-            September\n\
-            October\n\
-            November\n\
-            December", "Submit");
+            Text_ListBox(playerid, using inline register_birthmonth, $BIRTHMONTH_REGTITLE, $BIRTHMONTH_REGLIST, $SUBMIT_BTN, $BLANK_BTN);
         }
         case CONFIRM_BIRTHDATE:{
             new string[4*31];
@@ -887,17 +876,18 @@ PlayerDialog(playerid, dialog){
             Dialog_ShowCallback(playerid, using inline register_birthdate, DIALOG_STYLE_LIST, "The Four Horsemen Project - Confirm Birhtdate", string, "Submit");
         }
         case CONFIRM_BIRTHYEAR:{
-            new year, mo, da, altyear, string[7*44];
-            getdate(year, mo, da);
-            altyear = year - 50;
-            for(new i = 0, j = 44; i < j; i++){
-                if(isnull(string)) format(string, sizeof string, "%d", altyear);
-                else format(string, sizeof string, "%s\n%d", string, altyear+i);
+            new altyear, ye, mo, day, string[10*50];
+            getdate(ye, mo, day);
+            altyear = ye - 50;
+            for(new i = altyear, j = ye; i < j; i++){
+                if(isnull(string)) format(string, sizeof string, "%d", i);
+                else format(string, sizeof string, "%s\n%d", string, i);
             }
             inline register_birthyear(pid, dialogid, response, listitem, string:inputtext[]){
                 #pragma unused pid, dialogid, inputtext
                 if(response){
                     PlayerData[playerid][birthyear] = altyear+listitem;
+                    ShowTextDrawForPlayer(playerid, AFTERREGISTERFORPLAYER);
                 }
             }
             Dialog_ShowCallback(playerid, using inline register_birthyear, DIALOG_STYLE_LIST, "The Four Horsemen Project - Confirm Birthyear", string, "Submit");
@@ -1091,66 +1081,44 @@ Textdraws(playerid, type, textdrawtype){
         case GLOBAL_TEXTDRAWS:{
             switch(textdrawtype){
                 case MAIN_MENU:{
-                    MainMenu[0] = TextDrawCreate(315.599731, 13.040017, "The_Four_Horsemen_Project");
-                    TextDrawLetterSize(MainMenu[0], 0.864000, 3.780265);
-                    TextDrawAlignment(MainMenu[0], 2);
-                    TextDrawColor(MainMenu[0], 255);
-                    TextDrawSetShadow(MainMenu[0], 0);
-                    TextDrawSetOutline(MainMenu[0], 1);
-                    TextDrawBackgroundColor(MainMenu[0], -1);
-                    TextDrawFont(MainMenu[0], 1);
-                    TextDrawSetProportional(MainMenu[0], 1);
-                    TextDrawSetShadow(MainMenu[0], 0);
+                    Mainmenu[0] = TextDrawCreate(2.000017, 2.586644, "box");
+                    TextDrawLetterSize(Mainmenu[0], 0.000000, 14.640000);
+                    TextDrawTextSize(Mainmenu[0], 643.000000, 0.000000);
+                    TextDrawAlignment(Mainmenu[0], 1);
+                    TextDrawColor(Mainmenu[0], -1);
+                    TextDrawUseBox(Mainmenu[0], 1);
+                    TextDrawBoxColor(Mainmenu[0], 255);
+                    TextDrawSetShadow(Mainmenu[0], 0);
+                    TextDrawSetOutline(Mainmenu[0], 0);
+                    TextDrawBackgroundColor(Mainmenu[0], 255);
+                    TextDrawFont(Mainmenu[0], 1);
+                    TextDrawSetProportional(Mainmenu[0], 1);
+                    TextDrawSetShadow(Mainmenu[0], 0);
 
-                    MainMenu[1] = TextDrawCreate(2.799945, 1.840006, "box");
-                    TextDrawLetterSize(MainMenu[1], 0.000000, 10.799998);
-                    TextDrawTextSize(MainMenu[1], 638.000000, 0.000000);
-                    TextDrawAlignment(MainMenu[1], 1);
-                    TextDrawColor(MainMenu[1], -1);
-                    TextDrawUseBox(MainMenu[1], 1);
-                    TextDrawBoxColor(MainMenu[1], 255);
-                    TextDrawSetShadow(MainMenu[1], 0);
-                    TextDrawSetOutline(MainMenu[1], 0);
-                    TextDrawBackgroundColor(MainMenu[1], 255);
-                    TextDrawFont(MainMenu[1], 1);
-                    TextDrawSetProportional(MainMenu[1], 1);
-                    TextDrawSetShadow(MainMenu[1], 0);
+                    Mainmenu[1] = TextDrawCreate(160.399993, 22.746669, "The_Four_Horsemen_Project");
+                    TextDrawLetterSize(Mainmenu[1], 0.720800, 4.295464);
+                    TextDrawAlignment(Mainmenu[1], 1);
+                    TextDrawColor(Mainmenu[1], -2139094785);
+                    TextDrawSetShadow(Mainmenu[1], 0);
+                    TextDrawSetOutline(Mainmenu[1], 1);
+                    TextDrawBackgroundColor(Mainmenu[1], -1);
+                    TextDrawFont(Mainmenu[1], 1);
+                    TextDrawSetProportional(Mainmenu[1], 1);
+                    TextDrawSetShadow(Mainmenu[1], 0);
 
-                    MainMenu[2] = TextDrawCreate(297.199890, 54.853332, "Gamemode: Mixed~n~Version:0.0.1a");
-                    TextDrawLetterSize(MainMenu[2], 0.412799, 1.607466);
-                    TextDrawAlignment(MainMenu[2], 2);
-                    TextDrawColor(MainMenu[2], -1);
-                    TextDrawSetShadow(MainMenu[2], -1);
-                    TextDrawSetOutline(MainMenu[2], 0);
-                    TextDrawBackgroundColor(MainMenu[2], 255);
-                    TextDrawFont(MainMenu[2], 1);
-                    TextDrawSetProportional(MainMenu[2], 1);
-                    TextDrawSetShadow(MainMenu[2], -1);
-
-                    MainMenu[3] = TextDrawCreate(2.799979, 388.613464, "box");
-                    TextDrawLetterSize(MainMenu[3], 0.000000, 6.319998);
-                    TextDrawTextSize(MainMenu[3], 638.000000, 0.000000);
-                    TextDrawAlignment(MainMenu[3], 1);
-                    TextDrawColor(MainMenu[3], -1);
-                    TextDrawUseBox(MainMenu[3], 1);
-                    TextDrawBoxColor(MainMenu[3], 255);
-                    TextDrawSetShadow(MainMenu[3], 0);
-                    TextDrawSetOutline(MainMenu[3], 0);
-                    TextDrawBackgroundColor(MainMenu[3], 255);
-                    TextDrawFont(MainMenu[3], 1);
-                    TextDrawSetProportional(MainMenu[3], 1);
-                    TextDrawSetShadow(MainMenu[3], 0);
-
-                    MainMenu[4] = TextDrawCreate(298.000061, 408.773376, "Project is made for the benefit and fun of the SA-MP community");
-                    TextDrawLetterSize(MainMenu[4], 0.400000, 1.600000);
-                    TextDrawAlignment(MainMenu[4], 2);
-                    TextDrawColor(MainMenu[4], -1);
-                    TextDrawSetShadow(MainMenu[4], 0);
-                    TextDrawSetOutline(MainMenu[4], 0);
-                    TextDrawBackgroundColor(MainMenu[4], 255);
-                    TextDrawFont(MainMenu[4], 1);
-                    TextDrawSetProportional(MainMenu[4], 1);
-                    TextDrawSetShadow(MainMenu[4], 0);
+                    Mainmenu[2] = TextDrawCreate(207.599990, 66.800010, "Roleplay V 0.1.1 Alpha");
+                    TextDrawLetterSize(Mainmenu[2], 0.624000, 1.540266);
+                    TextDrawTextSize(Mainmenu[2], 562.000000, 0.000000);
+                    TextDrawAlignment(Mainmenu[2], 1);
+                    TextDrawColor(Mainmenu[2], -1);
+                    TextDrawUseBox(Mainmenu[2], 1);
+                    TextDrawBoxColor(Mainmenu[2], 255);
+                    TextDrawSetShadow(Mainmenu[2], 0);
+                    TextDrawSetOutline(Mainmenu[2], 0);
+                    TextDrawBackgroundColor(Mainmenu[2], 255);
+                    TextDrawFont(Mainmenu[2], 1);
+                    TextDrawSetProportional(Mainmenu[2], 1);
+                    TextDrawSetShadow(Mainmenu[2], 0);
                 }
             }
         }
@@ -1388,8 +1356,8 @@ ShowTextDrawForPlayer(playerid, type){
     switch(type){
         case MAINMENUFORPLAYER:{
             Textdraws(playerid, GLOBAL_TEXTDRAWS, MAIN_MENU);
-            for(new i = 0, j = 5; i < j; i++){
-                TextDrawShowForPlayer(playerid, MainMenu[i]);
+            for(new i = 0, j = 3; i < j; i++){
+                TextDrawShowForPlayer(playerid, Mainmenu[i]);
             }
         }
         case AFTERREGISTERFORPLAYER:{
@@ -1419,8 +1387,8 @@ ShowTextDrawForPlayer(playerid, type){
 HideTextDrawForPlayer(playerid, type){
     switch(type){
         case MAINMENUFORPLAYER:{
-            for(new i = 0, j = 5; i < j; i++){
-                TextDrawHideForPlayer(playerid, MainMenu[i]);
+            for(new i = 0, j = 3; i < j; i++){
+                TextDrawHideForPlayer(playerid, Mainmenu[i]);
             }
         }
         case AFTERREGISTERFORPLAYER:{
@@ -1563,7 +1531,7 @@ CreateDatabase(){
     }
     if(!SL::ExistsTable("Doors")){
         new handle = SL::Open(SL::CREATE, "Doors", .database = Database);
-        SL::AddTableEntry(handle, "doorid", SL_TYPE_VCHAR, .auto_increment = true, .setprimary = true);
+        SL::AddTableEntry(handle, "doorid", SL_TYPE_INT, .auto_increment = true, .setprimary = true);
         SL::AddTableEntry(handle, "doortext", SL_TYPE_VCHAR, 144);
         SL::AddTableEntry(handle, "doortype", SL_TYPE_INT);
         SL::AddTableEntry(handle, "dx", SL_TYPE_FLOAT);
@@ -1579,12 +1547,15 @@ CreateDatabase(){
         SL::AddTableEntry(handle, "diint", SL_TYPE_INT);
         SL::AddTableEntry(handle, "divw", SL_TYPE_INT);
         SL::AddTableEntry(handle, "restriction", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "restrictiontype", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "restrictionlevel", SL_TYPE_INT);
         SL::AddTableEntry(handle, "passcode", SL_TYPE_VCHAR, 65);
         SL::AddTableEntry(handle, "saltcode", SL_TYPE_VCHAR, 16);
-        SL::AddTableEntry(handle, "dlock", SL_TYPE_INT);
-        SL::AddTableEntry(handle, "dlocktype", SL_TYPE_INT);
-        SL::AddTableEntry(handle, "dalarm", SL_TYPE_INT);
-        SL::AddTableEntry(handle, "dalarmtype", SL_TYPE_INT);
+        SL::AddTableEntry(handle, "dlock", SL_TYPE_INT, 1);
+        SL::AddTableEntry(handle, "dlocktype", SL_TYPE_INT, 1);
+        SL::AddTableEntry(handle, "dalarm", SL_TYPE_INT, 1);
+        SL::AddTableEntry(handle, "dalarmtype", SL_TYPE_INT, 1);
+        SL::AddTableEntry(handle, "davailable", SL_TYPE_INT, 1);
         SL::Close(handle);
     }
     return 1;
@@ -1612,3 +1583,48 @@ CreateServerLog(const logtext[], logtype){
     SL::Close(handle);
     return 1;
 }*/
+
+DoorQuery(doorid, dtype){
+    switch(dtype){
+        case CREATE_DATA:{
+            new handle = SL::Open(SL::INSERT, "Doors", .database = Database);
+            SL::WriteString(handle, "doortext", DoorData[doorid][doortext]);
+            SL::WriteInt(handle, "doortype", DoorData[doorid][doortype]);
+            SL::WriteFloat(handle, "dx", DoorData[doorid][dx]);
+            SL::WriteFloat(handle, "dy", DoorData[doorid][dy]);
+            SL::WriteFloat(handle, "dz", DoorData[doorid][dz]);
+            SL::WriteFloat(handle, "da", DoorData[doorid][da]);
+            SL::WriteInt(handle, "dint", DoorData[doorid][dint]);
+            SL::WriteInt(handle, "dvw", DoorData[doorid][dvw]);
+            SL::WriteFloat(handle, "dix", DoorData[doorid][dix]);
+            SL::WriteFloat(handle, "diy", DoorData[doorid][diy]);
+            SL::WriteFloat(handle, "diz", DoorData[doorid][diz]);
+            SL::WriteFloat(handle, "dia", DoorData[doorid][dia]);
+            SL::WriteInt(handle, "diint", DoorData[doorid][diint]);
+            SL::WriteInt(handle, "divw", DoorData[doorid][divw]);
+            SL::WriteInt(handle, "restriction", DoorData[doorid][restriction]);
+            SL::WriteInt(handle, "restrictiontype", DoorData[doorid][restrictiontype]);
+            SL::WriteInt(handle, "restrictionlevel", DoorData[doorid][restrictionlevel]);
+            SL::WriteString(handle, "passcode", DoorData[doorid][passcode]);
+            SL::WriteString(handle, "saltcode", DoorData[doorid][saltcode]);
+            SL::WriteInt(handle, "dlock", (DoorData[doorid][dlock]) ? 1 : 0);
+            SL::WriteInt(handle, "dlocktype", DoorData[doorid][dlocktype]);
+            SL::WriteInt(handle, "dalarm", (DoorData[doorid][dalarm]) ? 1 : 0);
+            SL::WriteInt(handle, "dalarmtype", DoorData[doorid][dalarmtype]);
+            SL::WriteInt(handle, "davailable", (DoorData[doorid][davailable]) ? 1 : 0);
+            SL::Close(handle);
+        }
+        case EMPTY_DATA:{
+            DoorData[doorid][doortext] = EOS;
+            DoorData[doorid][doortype] = DOOR_NORMAL;
+            DoorData[doorid][dx] = DoorData[doorid][dy] = DoorData[doorid][dz] =
+            DoorData[doorid][da] = DoorData[doorid][dix] = DoorData[doorid][diy] = DoorData[doorid][diz] =
+            DoorData[doorid][dia] = 0.0;
+            DoorData[doorid][dint] = DoorData[doorid][dvw] = DoorData[doorid][diint] =
+            DoorData[doorid][divw] = DoorData[doorid][restriction] = DoorData[doorid][restrictiontype] = 
+            DoorData[doorid][restrictionlevel] = DoorData[doorid][dlocktype] = DoorData[doorid][dalarmtype] = 0;
+            DoorData[doorid][dlock] = DoorData[doorid][dalarm] = DoorData[doorid][davailable] = FALSE;
+        }
+    }
+    return 1;
+}

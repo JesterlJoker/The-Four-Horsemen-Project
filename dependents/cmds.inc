@@ -41,15 +41,35 @@ YCMD:car(playerid, params[], help){
     return 1;
 }
 
-
-public e_COMMAND_ERRORS:OnPlayerCommandReceived(playerid, cmdtext[], e_COMMAND_ERRORS:success)
-{
-    switch (success)
-    {
-        case COMMAND_UNDEFINED:
-        {
-            Text_Send(playerid, $COMMAND_UNDEFINED);
+YCMD:createdoor(playerid, params[], help){
+    if(help) return Text_Send(playerid, $CMD_DOOR_HELP);
+    if(isnull(params)) return Text_Send(playerid, $CMD_DOOR_SSCANF);
+    new doorid = -1;
+    for(new i = 0, j = MAX_DOORS; i < j; i++){
+        if(DoorData[i][davailable] == FALSE){
+            doorid = i;
+            break;
         }
     }
+    GetPlayerPos(playerid, DoorData[doorid][dx], DoorData[doorid][dy], DoorData[doorid][dz]);
+    GetPlayerFacingAngle(playerid, DoorData[doorid][da]);
+    DoorData[doorid][dint] = GetPlayerInterior(playerid);
+    DoorData[doorid][dvw] = GetPlayerVirtualWorld(playerid);
+    DoorData[doorid][doortype] = DOOR_NORMAL;
+    DoorQuery(doorid, CREATE_DATA);
+    return 1;
+}
+
+public e_COMMAND_ERRORS:OnPlayerCommandReceived(playerid, cmdtext[], e_COMMAND_ERRORS:success){
+    if(!BitFlag_Get(PlayerFlag{ playerid }, LOGGED_IN_PLAYER)) return Text_Send(playerid, $PLAYER_NOT_ONLINE), COMMAND_ZERO_RET;
+    switch (success)
+    {
+        case COMMAND_UNDEFINED: return Text_Send(playerid, $COMMAND_UNDEFINED), COMMAND_ZERO_RET;
+    }
+    return COMMAND_OK;
+}
+
+public e_COMMAND_ERRORS:OnPlayerCommandPerformed(playerid, cmdtext[], e_COMMAND_ERRORS:success)
+{
     return COMMAND_OK;
 }

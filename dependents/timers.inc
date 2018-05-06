@@ -1,3 +1,4 @@
+loadtext main[JSYSTEM];
 task checktimer[250](){
     new h, mins, secs;
     gettime(h, mins, secs);
@@ -42,7 +43,7 @@ task datatimer[1000*600](){
             GetPlayerName(playerid, PlayerData[playerid][username], MAX_USERNAME),
             LoadAllPlayerData(playerid);
         }
-        SCM(playerid, -1, "Jester: The system rebuffered. System saved all data and did a reload");
+        Text_Send(playerid, $JS_REBUFFMESSAGE);
     }
     return 1;
 }

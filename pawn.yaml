@@ -7,14 +7,14 @@ entry: fr.pwn
 output: fr.amx
 dependencies:
 - sampctl/samp-stdlib
-- pawn-lang/YSI-includes
-- Zeex/samp-plugin-crashdetect
 - Open-GTO/sa-mp-fixes
+- sampctl/mapfix
+- Zeex/samp-plugin-crashdetect
+- pawn-lang/YSI-includes
+- JesterlJoker/easy-sqlite
+- JesterlJoker/easy-mysql
 - Southclaws/progress2
 - maddinat0r/sscanf
 - maddinat0r/samp-discord-connector
-- JesterlJoker/easy-sqlite
-- JesterlJoker/easy-mysql
-- sampctl/mapfix
 runtime:
   mode: main

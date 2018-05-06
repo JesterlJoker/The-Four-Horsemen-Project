@@ -81,6 +81,34 @@ enum pInfo{
     penalties
 }
 
+enum dInfo{
+    sqlid,
+    doortext[144],
+    doortype,
+    Float: dx,
+    Float: dy,
+    Float: dz,
+    Float: da,
+    dint,
+    dvw,
+    Float: dix,
+    Float: diy,
+    Float: diz,
+    Float: dia,
+    diint,
+    divw,
+    restriction,
+    restrictiontype,
+    restrictionlevel,
+    passcode[MAX_PASS],
+    saltcode[MAX_SALT],
+    bool: dlock,
+    dlocktype,
+    bool: dalarm,
+    dalarmtype,
+    bool: davailable
+}
+
 enum PlayerFlags:(<<= 1) {
     LOGGED_IN_PLAYER = 1,
     PLAYER_IS_DYING,
@@ -117,15 +145,19 @@ enum {
     MAINMENUFORPLAYER, AFTERREGISTERFORPLAYER,
 
     //Vehicle Param
-    PARAM_ALARM, PARAM_BONNET, PARAM_BOOT, PARAM_ENGINE, PARAM_DOORS, PARAM_LIGHTS
+    PARAM_ALARM, PARAM_BONNET, PARAM_BOOT, PARAM_ENGINE, PARAM_DOORS, PARAM_LIGHTS,
+
+    // Door Types
+    DOOR_NORMAL
 }
 
 new 
     PlayerData[MAX_PLAYERS][pInfo],
     PlayerFlags: PlayerFlag[MAX_PLAYERS char],
+    DoorData[MAX_DOORS][dInfo],
     //DCC_Channel: dc
     DB: Database,
 
-    Text:MainMenu[5],
+    Text:Mainmenu[3],
     PlayerText:AfterRegister[MAX_PLAYERS][18]
     ;
